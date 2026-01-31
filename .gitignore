@@ -1,0 +1,29 @@
+# Terraform関連
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+
+# 認証情報・環境変数
+.env
+*.pem
+*.key
+
+# OS関連
+.DS_Store
+Thumbs.db
+
+# IDE関連
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# バックアップ
+*.bak
+*.backup
+crash.log
+crash.*.log
