@@ -19,9 +19,9 @@ terraform {
 }
 
 provider "snowflake" {
-  # 環境変数から読み込み:
-  # SNOWFLAKE_ACCOUNT
+  # 環境変数から読み込み（推奨形式）:
+  # SNOWFLAKE_ORGANIZATION_NAME (組織名)
+  # SNOWFLAKE_ACCOUNT_NAME (アカウント名)
   # SNOWFLAKE_USER
   # SNOWFLAKE_PASSWORD
-  # SNOWFLAKE_REGION
 }

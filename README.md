@@ -38,19 +38,19 @@ cp .env.example .env
 `.env`ファイルを編集：
 ```bash
 # Snowflakeアカウント識別子を確認する方法：
-# Snowflake WebUIにログイン → 左下のアカウント名をクリック → 「アカウントの管理」→「アカウント」タブ
-# 例: abc12345.ap-northeast-1.aws
+# Snowflake WebUIにログイン → 左下のアカウント名をクリック → 「Copy account identifier」
+# 例: MYORG-MYACCOUNT の場合、組織名は MYORG、アカウント名は MYACCOUNT
 
-SNOWFLAKE_ACCOUNT=your-account-identifier
+SNOWFLAKE_ORGANIZATION_NAME=your-organization-name
+SNOWFLAKE_ACCOUNT_NAME=your-account-name
 SNOWFLAKE_USER=your-admin-user
 SNOWFLAKE_PASSWORD=your-password
-SNOWFLAKE_REGION=ap-northeast-1
 ENVIRONMENT=sandbox
 ```
 
 環境変数を読み込み：
 ```bash
-export $(cat .env | xargs)
+set -a && source .env && set +a
 ```
 
 ### 2. Terraformの初期化
@@ -148,8 +148,9 @@ terraform destroy
 - Snowflake WebUIで手動ログインできるか確認
 
 ### エラー: "Account identifier is invalid"
-- `SNOWFLAKE_ACCOUNT`の形式を確認
-- 正しい形式: `組織名-アカウント名`（例: `abc12345.ap-northeast-1.aws`）
+- `SNOWFLAKE_ORGANIZATION_NAME`と`SNOWFLAKE_ACCOUNT_NAME`の値を確認
+- Snowflake WebUIの左下 → 「Copy account identifier」で確認
+- 例: `MYORG-MYACCOUNT`の場合、組織名=`MYORG`、アカウント名=`MYACCOUNT`
 
 ### エラー: "Insufficient privileges"
 - 使用している管理者ユーザーに`ACCOUNTADMIN`ロールがあるか確認

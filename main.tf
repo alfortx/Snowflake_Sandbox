@@ -39,7 +39,7 @@ resource "snowflake_warehouse" "sandbox" {
 # =============================================================================
 # ロールの作成
 # =============================================================================
-resource "snowflake_role" "sandbox_role" {
+resource "snowflake_account_role" "sandbox_role" {
   name    = var.role_name
   comment = "サンドボックス環境で作業するためのロール"
 }
@@ -54,7 +54,7 @@ resource "snowflake_user" "sandbox_user" {
   display_name = "Sandbox User"
 
   # デフォルトロールを設定
-  default_role = snowflake_role.sandbox_role.name
+  default_role = snowflake_account_role.sandbox_role.name
 
   # ユーザーが最初にログインしたときのデフォルト設定
   default_warehouse = snowflake_warehouse.sandbox.name
@@ -68,57 +68,54 @@ resource "snowflake_user" "sandbox_user" {
 # =============================================================================
 
 # データベースの使用権限
-resource "snowflake_database_grant" "sandbox_role_usage" {
-  database_name = snowflake_database.sandbox.name
-  privilege     = "USAGE"
-  roles         = [snowflake_role.sandbox_role.name]
+resource "snowflake_grant_privileges_to_account_role" "database_usage" {
+  account_role_name = snowflake_account_role.sandbox_role.name
+  privileges        = ["USAGE"]
+
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = snowflake_database.sandbox.name
+  }
 }
 
-# スキーマの使用権限
-resource "snowflake_schema_grant" "sandbox_role_usage" {
-  database_name = snowflake_database.sandbox.name
-  schema_name   = snowflake_schema.work.name
-  privilege     = "USAGE"
-  roles         = [snowflake_role.sandbox_role.name]
+# スキーマの権限（USAGE, CREATE TABLE, CREATE VIEW）
+resource "snowflake_grant_privileges_to_account_role" "schema_privileges" {
+  account_role_name = snowflake_account_role.sandbox_role.name
+  privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW"]
+
+  on_schema {
+    schema_name = "\"${snowflake_database.sandbox.name}\".\"${snowflake_schema.work.name}\""
+  }
 }
 
-# スキーマ内でのテーブル作成権限
-resource "snowflake_schema_grant" "sandbox_role_create_table" {
-  database_name = snowflake_database.sandbox.name
-  schema_name   = snowflake_schema.work.name
-  privilege     = "CREATE TABLE"
-  roles         = [snowflake_role.sandbox_role.name]
-}
+# 今後作成されるテーブルへのSELECT権限
+resource "snowflake_grant_privileges_to_account_role" "future_tables_select" {
+  account_role_name = snowflake_account_role.sandbox_role.name
+  privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE"]
 
-# スキーマ内での各種オブジェクト作成権限
-resource "snowflake_schema_grant" "sandbox_role_create_view" {
-  database_name = snowflake_database.sandbox.name
-  schema_name   = snowflake_schema.work.name
-  privilege     = "CREATE VIEW"
-  roles         = [snowflake_role.sandbox_role.name]
-}
-
-# 既存・今後作成されるテーブルへの全権限（SELECT, INSERT, UPDATE, DELETE等）
-resource "snowflake_table_grant" "sandbox_role_all_tables" {
-  database_name = snowflake_database.sandbox.name
-  schema_name   = snowflake_schema.work.name
-  privilege     = "SELECT"
-  roles         = [snowflake_role.sandbox_role.name]
-
-  on_future = true # 今後作成されるテーブルにも適用
+  on_schema_object {
+    future {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${snowflake_database.sandbox.name}\".\"${snowflake_schema.work.name}\""
+    }
+  }
 }
 
 # ウェアハウスの使用権限
-resource "snowflake_warehouse_grant" "sandbox_role_usage" {
-  warehouse_name = snowflake_warehouse.sandbox.name
-  privilege      = "USAGE"
-  roles          = [snowflake_role.sandbox_role.name]
+resource "snowflake_grant_privileges_to_account_role" "warehouse_usage" {
+  account_role_name = snowflake_account_role.sandbox_role.name
+  privileges        = ["USAGE", "OPERATE"]
+
+  on_account_object {
+    object_type = "WAREHOUSE"
+    object_name = snowflake_warehouse.sandbox.name
+  }
 }
 
 # =============================================================================
 # ユーザーへのロール付与
 # =============================================================================
-resource "snowflake_role_grants" "sandbox_user_role" {
-  role_name = snowflake_role.sandbox_role.name
-  users     = [snowflake_user.sandbox_user.name]
+resource "snowflake_grant_account_role" "user_role" {
+  role_name = snowflake_account_role.sandbox_role.name
+  user_name = snowflake_user.sandbox_user.name
 }
