@@ -18,10 +18,45 @@ terraform {
   # }
 }
 
+# デフォルトプロバイダー（使用しない、エイリアスを明示的に使用）
 provider "snowflake" {
+  alias = "default"
   # 環境変数から読み込み（推奨形式）:
   # SNOWFLAKE_ORGANIZATION_NAME (組織名)
   # SNOWFLAKE_ACCOUNT_NAME (アカウント名)
+  # SNOWFLAKE_USER
+  # SNOWFLAKE_PASSWORD
+}
+
+# SYSADMIN用プロバイダー: Database, Schema, Warehouse作成
+provider "snowflake" {
+  alias = "sysadmin"
+  role  = "SYSADMIN"
+  # 環境変数から読み込み:
+  # SNOWFLAKE_ORGANIZATION_NAME
+  # SNOWFLAKE_ACCOUNT_NAME
+  # SNOWFLAKE_USER
+  # SNOWFLAKE_PASSWORD
+}
+
+# SECURITYADMIN用プロバイダー: Role作成と権限付与
+provider "snowflake" {
+  alias = "securityadmin"
+  role  = "SECURITYADMIN"
+  # 環境変数から読み込み:
+  # SNOWFLAKE_ORGANIZATION_NAME
+  # SNOWFLAKE_ACCOUNT_NAME
+  # SNOWFLAKE_USER
+  # SNOWFLAKE_PASSWORD
+}
+
+# USERADMIN用プロバイダー: User作成
+provider "snowflake" {
+  alias = "useradmin"
+  role  = "USERADMIN"
+  # 環境変数から読み込み:
+  # SNOWFLAKE_ORGANIZATION_NAME
+  # SNOWFLAKE_ACCOUNT_NAME
   # SNOWFLAKE_USER
   # SNOWFLAKE_PASSWORD
 }

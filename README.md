@@ -14,7 +14,15 @@ Snowflakeの学習用サンドボックス環境をTerraformで自動構築す�
 
 ### 必要なツール
 - Terraform（v1.0以上）
-- Snowflakeアカウント（管理者権限）
+- Snowflakeアカウント
+
+### 必要な権限
+管理者ユーザーに以下のロールが必要です：
+- **SYSADMIN**: Database、Schema、Warehouseの作成
+- **SECURITYADMIN**: Roleの作成と権限付与
+- **USERADMIN**: Userの作成
+
+**注**: ACCOUNTADMINロールも持っている場合は、すべての操作が可能です。
 
 ### Terraformのインストール
 ```bash
@@ -200,6 +208,8 @@ provider "snowflake" {
 Terraformがどのクラウドサービスを使うか定義します。
 - Snowflakeプロバイダーのバージョン指定
 - 認証方法の設定（環境変数から読み込み）
+- **ロール別プロバイダー**: SYSADMIN、SECURITYADMIN、USERADMINの3つのエイリアス
+  - ACCOUNTADMINの使用を最小化し、セキュリティを向上
 - 将来のS3バックエンド設定（コメントアウト済み）
 
 #### 2. **variables.tf** - 何を変更できるか
@@ -210,9 +220,10 @@ Terraformがどのクラウドサービスを使うか定義します。
 
 #### 3. **main.tf** - 何を作るか
 実際に作成するSnowflakeリソースを定義します。
-- データベース、スキーマ、ウェアハウス
-- ユーザー、ロール
-- 権限設定（ロールへの権限付与、ユーザーへのロール付与）
+- **SYSADMIN**: データベース、スキーマ、ウェアハウス
+- **SECURITYADMIN**: ロール、権限付与
+- **USERADMIN**: ユーザー
+- 各リソースに適切なロールを使用（ベストプラクティス）
 
 #### 4. **outputs.tf** - 結果を表示
 作成したリソースの情報を表示します。

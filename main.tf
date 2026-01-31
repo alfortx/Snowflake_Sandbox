@@ -1,7 +1,10 @@
 # =============================================================================
 # データベースの作成
+# SYSADMIN: Database, Schema, Warehouseなどのオブジェクト管理
 # =============================================================================
 resource "snowflake_database" "sandbox" {
+  provider = snowflake.sysadmin
+
   name    = var.database_name
   comment = var.database_comment
 
@@ -13,8 +16,11 @@ resource "snowflake_database" "sandbox" {
 
 # =============================================================================
 # スキーマの作成
+# SYSADMIN: Database配下のSchemaを作成
 # =============================================================================
 resource "snowflake_schema" "work" {
+  provider = snowflake.sysadmin
+
   database = snowflake_database.sandbox.name
   name     = var.schema_name
   comment  = var.schema_comment
@@ -22,8 +28,11 @@ resource "snowflake_schema" "work" {
 
 # =============================================================================
 # ウェアハウスの作成
+# SYSADMIN: Warehouseの作成と管理
 # =============================================================================
 resource "snowflake_warehouse" "sandbox" {
+  provider = snowflake.sysadmin
+
   name           = var.warehouse_name
   warehouse_size = var.warehouse_size
   comment        = var.warehouse_comment
@@ -38,16 +47,22 @@ resource "snowflake_warehouse" "sandbox" {
 
 # =============================================================================
 # ロールの作成
+# SECURITYADMIN: Roleの作成と管理
 # =============================================================================
 resource "snowflake_account_role" "sandbox_role" {
+  provider = snowflake.securityadmin
+
   name    = var.role_name
   comment = "サンドボックス環境で作業するためのロール"
 }
 
 # =============================================================================
 # ユーザーの作成
+# USERADMIN: Userの作成と管理
 # =============================================================================
 resource "snowflake_user" "sandbox_user" {
+  provider = snowflake.useradmin
+
   name         = var.user_name
   password     = var.user_password
   comment      = "サンドボックス環境の作業用ユーザー"
@@ -65,10 +80,13 @@ resource "snowflake_user" "sandbox_user" {
 
 # =============================================================================
 # ロールへの権限付与
+# SECURITYADMIN: 権限の付与と管理
 # =============================================================================
 
 # データベースの使用権限
 resource "snowflake_grant_privileges_to_account_role" "database_usage" {
+  provider = snowflake.securityadmin
+
   account_role_name = snowflake_account_role.sandbox_role.name
   privileges        = ["USAGE"]
 
@@ -80,6 +98,8 @@ resource "snowflake_grant_privileges_to_account_role" "database_usage" {
 
 # スキーマの権限（USAGE, CREATE TABLE, CREATE VIEW）
 resource "snowflake_grant_privileges_to_account_role" "schema_privileges" {
+  provider = snowflake.securityadmin
+
   account_role_name = snowflake_account_role.sandbox_role.name
   privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW"]
 
@@ -90,6 +110,8 @@ resource "snowflake_grant_privileges_to_account_role" "schema_privileges" {
 
 # 今後作成されるテーブルへのSELECT権限
 resource "snowflake_grant_privileges_to_account_role" "future_tables_select" {
+  provider = snowflake.securityadmin
+
   account_role_name = snowflake_account_role.sandbox_role.name
   privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE"]
 
@@ -103,6 +125,8 @@ resource "snowflake_grant_privileges_to_account_role" "future_tables_select" {
 
 # ウェアハウスの使用権限
 resource "snowflake_grant_privileges_to_account_role" "warehouse_usage" {
+  provider = snowflake.securityadmin
+
   account_role_name = snowflake_account_role.sandbox_role.name
   privileges        = ["USAGE", "OPERATE"]
 
@@ -114,8 +138,11 @@ resource "snowflake_grant_privileges_to_account_role" "warehouse_usage" {
 
 # =============================================================================
 # ユーザーへのロール付与
+# SECURITYADMIN: ユーザーへのロール付与
 # =============================================================================
 resource "snowflake_grant_account_role" "user_role" {
+  provider = snowflake.securityadmin
+
   role_name = snowflake_account_role.sandbox_role.name
   user_name = snowflake_user.sandbox_user.name
 }
