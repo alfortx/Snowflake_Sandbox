@@ -1,297 +1,273 @@
-# Snowflake Sandbox - Terraform環境構築
+# Snowflake Sandbox - Terraform 実行手順書
 
-Snowflakeの学習用サンドボックス環境をTerraformで自動構築するプロジェクトです。
+Snowflake（＋AWS）のサンドボックス環境をTerraformで自動構築するプロジェクトです。
+この手順書に沿って進めれば、コマンド1回でSnowflakeとAWSのリソースが一括で作成されます。
+
+---
 
 ## 作成されるリソース
 
-- **Database**: サンドボックス用データベース（SANDBOX_DB）
-- **Schema**: 作業用スキーマ（WORK）
-- **Role**: スキーマで作業可能なロール（SANDBOX_ROLE）
-- **User**: サンドボックスユーザー（sandbox_user）
-- **権限設定**: ロールへのスキーマ権限付与、ユーザーへのロール付与
+| サービス | リソース | 説明 |
+|---------|---------|------|
+| Snowflake | Database / Schema / Warehouse | 作業用の基本オブジェクト |
+| Snowflake | Role / User / 権限設定 | サンドボックス用のユーザー環境 |
+| Snowflake | Managed Accessスキーマ | 権限管理の学習用 |
+| Snowflake | Storage Integration | S3との連携設定 |
+| AWS | S3バケット | Snowflake外部テーブルのデータ格納先 |
+| AWS | IAMロール / IAMポリシー | SnowflakeがS3にアクセスするための権限 |
 
-## 前提条件
+---
 
-### 必要なツール
-- Terraform（v1.0以上）
-- Snowflakeアカウント
+## STEP 1: ツールの準備
 
-### 必要な権限
-管理者ユーザーに以下のロールが必要です：
-- **SYSADMIN**: Database、Schema、Warehouseの作成
-- **SECURITYADMIN**: Roleの作成と権限付与
-- **USERADMIN**: Userの作成
+Terraform がインストール済みか確認します。
 
-**注**: ACCOUNTADMINロールも持っている場合は、すべての操作が可能です。
-
-### Terraformのインストール
 ```bash
-# macOSの場合（Homebrew使用）
-brew install terraform
-
-# バージョン確認
 terraform --version
+# Terraform v1.0.0 以上が表示されればOK
 ```
 
-## セットアップ手順
+インストールされていない場合（macOS）：
 
-### 1. 環境変数の設定
+```bash
+brew install terraform
+```
 
-`.env.example`を`.env`にコピーして、実際の値を設定します。
+---
+
+## STEP 2: 認証情報の取得
+
+Terraform実行前に、SnowflakeとAWSそれぞれの接続情報を手元に控えておきます。
+**これらはTerraform自体を動かすために必要な情報で、Terraformでは作成できません（手作業が必須）。**
+
+---
+
+### 2-1. Snowflake の情報を取得する
+
+#### 必要な情報
+
+| 項目 | 変数名 | 取得場所 |
+|------|--------|---------|
+| 組織名 | `SNOWFLAKE_ORGANIZATION_NAME` | WebUI左下 |
+| アカウント名 | `SNOWFLAKE_ACCOUNT_NAME` | WebUI左下 |
+| 管理者ユーザー名 | `SNOWFLAKE_USER` | 自分で把握しているはず |
+| 管理者パスワード | `SNOWFLAKE_PASSWORD` | 自分で把握しているはず |
+
+#### 取得手順
+
+1. [Snowflake WebUI](https://app.snowflake.com/) にログイン
+2. 画面**左下**のアカウント名をクリック
+3. 「**Copy account identifier**」を選択
+4. `MYORG-MYACCOUNT` の形式でクリップボードにコピーされる
+   - `-` より左が **組織名**（SNOWFLAKE_ORGANIZATION_NAME）
+   - `-` より右が **アカウント名**（SNOWFLAKE_ACCOUNT_NAME）
+
+> **必要なロール**: ログインする管理者ユーザーが **ACCOUNTADMINロール** を持っている必要があります。
+> Snowflake WebUIで `USE ROLE ACCOUNTADMIN;` が実行できるか確認してください。
+
+---
+
+### 2-2. AWS の情報を取得する
+
+#### 必要な情報
+
+| 項目 | 変数名 | 取得場所 |
+|------|--------|---------|
+| アクセスキーID | `AWS_ACCESS_KEY_ID` | IAMコンソール |
+| シークレットアクセスキー | `AWS_SECRET_ACCESS_KEY` | IAMコンソール（作成時のみ表示） |
+
+#### 取得手順
+
+1. [AWS マネジメントコンソール](https://console.aws.amazon.com/) にログイン
+2. 右上のユーザー名 → 「**セキュリティ認証情報**」をクリック
+   （または IAM → ユーザー → 対象ユーザー → 「セキュリティ認証情報」タブ）
+3. 「**アクセスキーを作成**」をクリック
+4. 用途は「**コマンドラインインターフェイス（CLI）**」を選択
+5. アクセスキーIDとシークレットアクセスキーをメモ
+   - ⚠️ シークレットアクセスキーは**作成時にしか表示されません**。必ず控えること。
+
+#### 必要なIAM権限
+
+Terraform がS3とIAMを操作するため、使用するIAMユーザーに以下のポリシーが必要です。
+
+| ポリシー名 | 必要な理由 |
+|-----------|----------|
+| `AmazonS3FullAccess` | S3バケットの作成・管理 |
+| `IAMFullAccess` | IAMロール・ポリシーの作成・管理 |
+
+> 簡単にするなら `AdministratorAccess` を付与してもOKです（学習用サンドボックスの場合）。
+
+---
+
+## STEP 3: .env ファイルの作成
+
+テンプレートをコピーして、STEP 2で控えた値を記入します。
 
 ```bash
 cp .env.example .env
 ```
 
-`.env`ファイルを編集：
-```bash
-# Snowflakeアカウント識別子を確認する方法：
-# Snowflake WebUIにログイン → 左下のアカウント名をクリック → 「Copy account identifier」
-# 例: MYORG-MYACCOUNT の場合、組織名は MYORG、アカウント名は MYACCOUNT
+`.env` を開いて、各行の `your-xxx` 部分を実際の値に書き換えます。
 
-SNOWFLAKE_ORGANIZATION_NAME=your-organization-name
-SNOWFLAKE_ACCOUNT_NAME=your-account-name
-SNOWFLAKE_USER=your-admin-user
-SNOWFLAKE_PASSWORD=your-password
+```bash
+# 例（値はダミー）
+SNOWFLAKE_ORGANIZATION_NAME=MYORG
+SNOWFLAKE_ACCOUNT_NAME=MYACCOUNT
+SNOWFLAKE_USER=admin
+SNOWFLAKE_PASSWORD=MyPassword123!
+AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 ENVIRONMENT=sandbox
 ```
 
-環境変数を読み込み：
+> ⚠️ `.env` ファイルには認証情報が入っています。`.gitignore` で除外済みですが、
+> 絶対に Git にコミットしないよう注意してください。
+
+---
+
+## STEP 4: Terraformの実行
+
+### 4-1. 環境変数を読み込む
+
+`.env` の内容を環境変数としてターミナルに読み込みます。
+**このコマンドはターミナルを開き直すたびに毎回実行が必要です。**
+
 ```bash
 set -a && source .env && set +a
 ```
 
-### 2. Terraformの初期化
+> `set -a` ：以降のコマンドで定義した変数を自動的にexport（環境変数化）する設定
+> `source .env` ：.envの内容を読み込む
+> `set +a` ：`set -a` の設定を元に戻す
+
+読み込めたか確認する場合（任意）：
+
+```bash
+echo $SNOWFLAKE_ORGANIZATION_NAME
+# 組織名が表示されればOK
+```
+
+---
+
+### 4-2. Terraformを初期化する
+
+Terraformの動作に必要なプロバイダー（Snowflake/AWSへの接続ライブラリ）をダウンロードします。
+**初回1回だけ実行が必要です。**
 
 ```bash
 terraform init
 ```
 
-このコマンドで：
-- Snowflakeプロバイダーがダウンロードされます
-- `.terraform`ディレクトリが作成されます
+`Terraform has been successfully initialized!` と表示されれば成功です。
 
-### 3. 実行計画の確認
+---
+
+### 4-3. 実行計画を確認する（任意）
+
+実際には何も作成せず、「これから何が作られるか」をプレビューできます。
 
 ```bash
 terraform plan
 ```
 
-このコマンドで：
-- どのリソースが作成されるか確認できます
-- エラーがないかチェックできます
+エラーが表示されなければ問題ありません。
+`Plan: XX to add, 0 to change, 0 to destroy.` のように表示されます。
 
-### 4. リソースの作成
+---
+
+### 4-4. リソースを作成する
 
 ```bash
 terraform apply
 ```
 
-- `yes`を入力して実行を確認します
-- 数分で完了します
+途中で確認を求められます。内容を確認して `yes` と入力してください。
 
-### 5. 作成されたリソースの確認
+```
+Do you want to perform these actions?
+  Terraform will perform the actions described above.
+  Only 'yes' will be accepted to approve.
+
+  Enter a value: yes   ← これを入力してEnter
+```
+
+数分で完了し、作成されたリソースの情報が表示されます。
+
+---
+
+### 4-5. 作成内容を確認する（任意）
 
 ```bash
 terraform output
 ```
 
-接続情報が表示されます。
+Snowflake接続情報やリソース名が一覧表示されます。
 
-## 使い方
+---
 
-### Snowflakeへの接続
+## STEP 5: 動作確認
 
-1. [Snowflake WebUI](https://app.snowflake.com/)にアクセス
-2. 作成されたユーザーでログイン
-   - ユーザー名: `sandbox_user`
-   - パスワード: `.env`で設定した値
-3. ロール`SANDBOX_ROLE`を選択
-4. データベース`SANDBOX_DB`、スキーマ`WORK`で作業開始
+[Snowflake WebUI](https://app.snowflake.com/) に作成されたユーザーでログインして確認します。
 
-### テーブルの作成例
+| 項目 | 値 |
+|------|---|
+| ユーザー名 | `sandbox_user`（variables.tfのデフォルト値） |
+| パスワード | `ChangeMe123!`（variables.tfのデフォルト値） |
+| ロール | `SANDBOX_ROLE` |
+| データベース | `SANDBOX_DB` |
+| スキーマ | `WORK` |
 
-```sql
-USE ROLE SANDBOX_ROLE;
-USE DATABASE SANDBOX_DB;
-USE SCHEMA WORK;
+---
 
-CREATE TABLE users (
-  id INT,
-  name STRING,
-  created_at TIMESTAMP
-);
+## トラブルシューティング
 
-INSERT INTO users VALUES (1, 'Takahiro', CURRENT_TIMESTAMP());
+### Snowflake 関連
 
-SELECT * FROM users;
-```
+**`Error: Invalid credentials`**
+- `.env` の `SNOWFLAKE_USER` / `SNOWFLAKE_PASSWORD` が正しいか確認
+- Snowflake WebUIで手動ログインできるか確認
 
-## カスタマイズ
+**`Error: Account identifier is invalid`**
+- `SNOWFLAKE_ORGANIZATION_NAME` と `SNOWFLAKE_ACCOUNT_NAME` の値を確認
+- WebUIの「Copy account identifier」で `MYORG-MYACCOUNT` の形式でコピーし、`-` で分割して設定する
 
-`variables.tf`で設定を変更できます：
+**`Error: Insufficient privileges`**
+- 管理者ユーザーに `ACCOUNTADMIN` ロールがあるか確認
+- Snowflake WebUI で `USE ROLE ACCOUNTADMIN;` が実行できるか試す
 
-```hcl
-variable "database_name" {
-  default = "SANDBOX_DB"  # データベース名を変更
-}
+### AWS 関連
 
-variable "user_name" {
-  default = "sandbox_user"  # ユーザー名を変更
-}
-```
+**`Error: NoCredentialProviders`**
+- `set -a && source .env && set +a` を実行したか確認
+- `echo $AWS_ACCESS_KEY_ID` で値が表示されるか確認
+
+**`Error: AccessDenied`**
+- IAMユーザーに `AmazonS3FullAccess` と `IAMFullAccess` が付与されているか確認
+
+---
 
 ## リソースの削除
 
-**注意**: すべてのデータが削除されます！
+**⚠️ 注意: すべてのリソースとデータが削除されます。**
 
 ```bash
 terraform destroy
 ```
 
-## トラブルシューティング
-
-### エラー: "Invalid credentials"
-- `.env`の`SNOWFLAKE_USER`と`SNOWFLAKE_PASSWORD`を確認
-- Snowflake WebUIで手動ログインできるか確認
-
-### エラー: "Account identifier is invalid"
-- `SNOWFLAKE_ORGANIZATION_NAME`と`SNOWFLAKE_ACCOUNT_NAME`の値を確認
-- Snowflake WebUIの左下 → 「Copy account identifier」で確認
-- 例: `MYORG-MYACCOUNT`の場合、組織名=`MYORG`、アカウント名=`MYACCOUNT`
-
-### エラー: "Insufficient privileges"
-- 使用している管理者ユーザーに`ACCOUNTADMIN`ロールがあるか確認
-
-## 次のステップ
-
-### 1. AWSリソースの追加準備
-
-将来的にS3バケットやIAMロールを追加する場合：
-
-1. `provider.tf`にAWSプロバイダーを追加
-2. 新しいファイル`aws.tf`を作成
-3. S3バケット、IAMロールなどを定義
-
-### 2. Stateのリモート管理
-
-本格的に使う場合は、stateをS3に保存：
-
-```hcl
-# provider.tfのbackendブロックを有効化
-backend "s3" {
-  bucket         = "your-terraform-state-bucket"
-  key            = "snowflake-sandbox/terraform.tfstate"
-  region         = "ap-northeast-1"
-  dynamodb_table = "terraform-state-lock"
-  encrypt        = true
-}
-```
-
-### 3. 認証方法の改善
-
-セキュリティ向上のため、キーペア認証に移行：
-
-```hcl
-provider "snowflake" {
-  account           = var.account
-  user              = var.user
-  private_key_path  = "~/.ssh/snowflake_key.p8"
-}
-```
-
-## Terraformファイルの役割と関係性
-
-### 各ファイルの役割
-
-#### 1. **provider.tf** - どこに作るか
-Terraformがどのクラウドサービスを使うか定義します。
-- Snowflakeプロバイダーのバージョン指定
-- 認証方法の設定（環境変数から読み込み）
-- **ロール別プロバイダー**: SYSADMIN、SECURITYADMIN、USERADMINの3つのエイリアス
-  - ACCOUNTADMINの使用を最小化し、セキュリティを向上
-- 将来のS3バックエンド設定（コメントアウト済み）
-
-#### 2. **variables.tf** - 何を変更できるか
-カスタマイズ可能な設定値を定義します。
-- データベース名、スキーマ名、ユーザー名など
-- ウェアハウスのサイズや自動停止時間
-- デフォルト値が設定されているので変更は任意
-
-#### 3. **main.tf** - 何を作るか
-実際に作成するSnowflakeリソースを定義します。
-- **SYSADMIN**: データベース、スキーマ、ウェアハウス
-- **SECURITYADMIN**: ロール、権限付与
-- **USERADMIN**: ユーザー
-- 各リソースに適切なロールを使用（ベストプラクティス）
-
-#### 4. **outputs.tf** - 結果を表示
-作成したリソースの情報を表示します。
-- データベース名、ウェアハウス名など
-- 接続情報のサマリー
-- セットアップ完了メッセージ
-
-#### 5. **.env** - 認証情報（Gitで管理しない）
-Snowflakeへの接続情報を保存します。
-- アカウント識別子、ユーザー名、パスワード
-- 環境変数としてTerraformが読み込む
-- **.gitignore**で除外されるので安全
-
-### ファイル間の関係性と実行フロー
-
-```
-【準備】
-.env（認証情報）
-  ↓ export で環境変数化
-  ↓
-provider.tf（環境変数を読み込み）
-  ↓
-terraform init（プロバイダーダウンロード）
-
-【設定】
-variables.tf（変数定義）
-  ↓ デフォルト値または上書き
-  ↓
-main.tf（リソース定義）
-  ├─ var.database_name などを参照
-  └─ リソース間の依存関係を自動解決
-
-【実行】
-terraform plan（実行計画表示）
-  ↓
-terraform apply（リソース作成）
-  ↓
-outputs.tf（結果表示）
-```
-
-### リソースの依存関係
-
-main.tfでは、リソースが以下の順序で作成されます：
-
-1. **Database** → 2. **Schema**（Databaseに依存）
-3. **Warehouse**（独立）
-4. **Role**（独立）
-5. **User**（Role、Warehouseに依存）
-6. **権限設定**（上記すべてに依存）
-
-Terraformが自動的に依存関係を解決して、正しい順序で作成します。
+---
 
 ## ファイル構成
 
 ```
 Snowflake_Sandbox/
-├── .gitignore          # Gitで管理しないファイル
-├── .env.example        # 環境変数のサンプル
-├── .env                # 環境変数（実際の値）※Gitで管理しない
-├── README.md           # このファイル
-├── provider.tf         # プロバイダー設定
-├── variables.tf        # 変数定義
-├── main.tf             # リソース定義
-└── outputs.tf          # 出力値
+├── .env.example        # 認証情報のテンプレート（Gitで管理）
+├── .env                # 認証情報の実際の値（Gitで管理しない）
+├── .gitignore          # Gitの除外設定
+├── README.md           # この手順書
+├── provider.tf         # Snowflake/AWSへの接続設定（ロール別プロバイダー）
+├── variables.tf        # カスタマイズ可能な変数定義
+├── main.tf             # Snowflakeリソース定義（DB/Schema/WH/Role/User）
+├── managed_access.tf   # Managed Accessスキーマの学習用リソース
+├── aws.tf              # AWSリソース定義（S3/IAM/Storage Integration）
+└── outputs.tf          # 実行後の出力情報
 ```
-
-## 参考リンク
-
-- [Snowflake公式ドキュメント](https://docs.snowflake.com/)
-- [Terraform Snowflake Provider](https://registry.terraform.io/providers/Snowflake-Labs/snowflake/latest/docs)
-- [Terraform入門](https://developer.hashicorp.com/terraform/tutorials)

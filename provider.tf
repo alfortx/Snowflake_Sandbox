@@ -3,8 +3,12 @@ terraform {
 
   required_providers {
     snowflake = {
-      source  = "Snowflake-Labs/snowflake"
-      version = "~> 0.92"
+      source  = "snowflakedb/snowflake"
+      version = "~> 2.1"
+    }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
     }
   }
 
@@ -37,6 +41,14 @@ provider "snowflake" {
   # SNOWFLAKE_ACCOUNT_NAME
   # SNOWFLAKE_USER
   # SNOWFLAKE_PASSWORD
+
+  # v2.13.0 でプレビュー機能として扱われるリソースを明示的に有効化
+  preview_features_enabled = [
+    "snowflake_stage_resource",         # 外部ステージ
+    "snowflake_file_format_resource",   # ファイルフォーマット
+    "snowflake_table_resource",         # テーブル
+    "snowflake_external_table_resource", # 外部テーブル
+  ]
 }
 
 # SECURITYADMIN用プロバイダー: Role作成と権限付与
@@ -59,4 +71,32 @@ provider "snowflake" {
   # SNOWFLAKE_ACCOUNT_NAME
   # SNOWFLAKE_USER
   # SNOWFLAKE_PASSWORD
+}
+
+# ACCOUNTADMIN用プロバイダー: Storage Integration作成・Cortex DBロール付与・アカウントパラメータ管理
+provider "snowflake" {
+  alias = "accountadmin"
+  role  = "ACCOUNTADMIN"
+  # 環境変数から読み込み:
+  # SNOWFLAKE_ORGANIZATION_NAME
+  # SNOWFLAKE_ACCOUNT_NAME
+  # SNOWFLAKE_USER
+  # SNOWFLAKE_PASSWORD
+
+  # v2.13.0 で snowflake_storage_integration の内部実装がプレビュー機能に移行したため明示的に有効化
+  preview_features_enabled = [
+    "snowflake_storage_integration_resource",
+    "snowflake_current_account_resource",  # アカウントパラメータ管理
+  ]
+}
+
+# =============================================================================
+# AWS プロバイダー
+# =============================================================================
+# AWS プロバイダー: S3・IAM リソース管理
+provider "aws" {
+  region = "ap-northeast-1"
+  # 環境変数から読み込み:
+  # AWS_ACCESS_KEY_ID
+  # AWS_SECRET_ACCESS_KEY
 }

@@ -76,3 +76,88 @@ variable "warehouse_comment" {
   type        = string
   default     = "サンドボックス環境用のX-Smallウェアハウス"
 }
+
+# =============================================================================
+# Managed Access テスト用変数
+# =============================================================================
+
+variable "managed_access_db_name" {
+  description = "Managed Access テスト用データベース名"
+  type        = string
+  default     = "MANAGED_ACCESS_DB"
+}
+
+variable "schema_owner_role_name" {
+  description = "Managed Accessスキーマの所有者ロール名（provider.tf の role と一致させること）"
+  type        = string
+  default     = "SCHEMA_OWNER_ROLE"
+}
+
+variable "managed_schema_name" {
+  description = "Managed Access スキーマ名"
+  type        = string
+  default     = "MANAGED_SCHEMA"
+}
+
+# =============================================================================
+# AWS リソース変数（外部テーブル用）
+# =============================================================================
+
+variable "s3_bucket_name" {
+  description = "外部テーブルデータ用 S3 バケット名（グローバルで一意にすること）"
+  type        = string
+  default     = "snowflake-sandbox-external-data"
+}
+
+variable "iam_role_name" {
+  description = "Snowflake S3アクセス用 IAM ロール名"
+  type        = string
+  default     = "snowflake-sandbox-s3-role"
+}
+
+variable "storage_integration_name" {
+  description = "Snowflake Storage Integration 名（S3連携用）"
+  type        = string
+  default     = "SANDBOX_S3_INTEGRATION"
+}
+
+variable "stage_name" {
+  description = "外部ステージ名（S3を参照するSnowflakeのステージオブジェクト）"
+  type        = string
+  default     = "EXTERNAL_S3_STAGE"
+}
+
+# =============================================================================
+# Cortex リソース変数
+# =============================================================================
+
+variable "cortex_db_name" {
+  description = "Cortex関連リソースを配置するデータベース名"
+  type        = string
+  default     = "CORTEX_DB"
+}
+
+variable "cortex_analyst_schema_name" {
+  description = "Cortex Analytistのセマンティックモデルを配置するスキーマ名"
+  type        = string
+  default     = "SEMANTIC_MODELS"
+}
+
+variable "cortex_search_schema_name" {
+  description = "Cortex Searchサービスを配置するスキーマ名"
+  type        = string
+  default     = "SEARCH_SERVICES"
+}
+
+variable "semantic_model_stage_name" {
+  description = "セマンティックモデルのYAMLファイルを格納するステージ名"
+  type        = string
+  default     = "SEMANTIC_MODEL_FILES"
+}
+
+variable "cortex_role_name" {
+  description = "Cortexリソースの配置・変更・利用権限を持つロール名"
+  type        = string
+  default     = "CORTEX_ROLE"
+}
+

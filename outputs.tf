@@ -48,6 +48,147 @@ output "connection_info" {
   }
 }
 
+# =============================================================================
+# Managed Access テスト手順
+# =============================================================================
+output "managed_access_test_instructions" {
+  description = "Managed Access の権限制約を確認するためのSQL手順"
+  value       = <<-EOT
+    ─── Managed Access テスト手順 ───
+
+    【1】テーブル作成（成功）
+      USE ROLE ${snowflake_account_role.sandbox_role.name};
+      USE DATABASE ${snowflake_database.managed_access.name};
+      USE SCHEMA ${snowflake_schema.managed.name};
+      CREATE TABLE my_table (id INT);
+
+    【2】オブジェクト所有者による GRANT（エラー）
+      GRANT SELECT ON TABLE my_table TO ROLE ${snowflake_account_role.sandbox_role.name};
+      → Managed Access制約で失敗: スキーマ所有者以外はGRANT不可
+
+    【3】スキーマ所有者による GRANT（成功）
+      USE ROLE ${snowflake_account_role.schema_owner_role.name};
+      GRANT SELECT ON TABLE ${snowflake_database.managed_access.name}.${snowflake_schema.managed.name}.my_table TO ROLE ${snowflake_account_role.sandbox_role.name};
+  EOT
+}
+
+# =============================================================================
+# AWS リソース出力（次の Snowflake storage_integration で使用）
+# =============================================================================
+output "iam_role_arn" {
+  description = "Snowflake Storage Integration で使用する IAM Role ARN"
+  value       = aws_iam_role.snowflake_s3_role.arn
+}
+
+output "s3_bucket_arn" {
+  description = "外部テーブルデータ用 S3 バケットの ARN"
+  value       = aws_s3_bucket.external_table_data.arn
+}
+
+output "external_stage_name" {
+  description = "外部ステージの完全修飾名"
+  value       = "${snowflake_stage.external_s3.database}.${snowflake_stage.external_s3.schema}.${snowflake_stage.external_s3.name}"
+}
+
+output "external_stage_usage" {
+  description = "外部ステージの動作確認用SQL"
+  value       = <<-EOT
+    ─── 外部ステージ 動作確認手順 ───
+
+    USE ROLE ${snowflake_account_role.sandbox_role.name};
+    USE DATABASE ${snowflake_database.sandbox.name};
+    USE SCHEMA ${snowflake_schema.work.name};
+    USE WAREHOUSE ${snowflake_warehouse.sandbox.name};
+
+    -- ステージの内容を確認（S3バケットのファイル一覧）
+    LIST @${snowflake_stage.external_s3.name};
+
+    -- ファイルを S3 にアップロード後、外部テーブルを作成する例
+    CREATE EXTERNAL TABLE ext_sample (
+      id   NUMBER  AS (VALUE:c1::NUMBER),
+      name STRING  AS (VALUE:c2::STRING)
+    )
+    WITH LOCATION = @${snowflake_stage.external_s3.name}
+    FILE_FORMAT = (TYPE = JSON);
+  EOT
+}
+
+# =============================================================================
+# COVID-19 データロード関連の出力
+# =============================================================================
+output "covid19_stage_name" {
+  description = "COVID-19 外部ステージの完全修飾名"
+  value       = "${snowflake_database.raw_db.name}.${snowflake_schema.covid19.name}.${snowflake_stage.covid19_s3_stage.name}"
+}
+
+output "covid19_external_table_name" {
+  description = "COVID-19 外部テーブルの完全修飾名"
+  value       = "${snowflake_database.raw_db.name}.${snowflake_schema.covid19.name}.${snowflake_external_table.ext_jhu_timeseries.name}"
+}
+
+output "covid19_external_table_usage" {
+  description = "COVID-19 外部テーブル動作確認SQL"
+  value       = <<-EOT
+    ─── COVID-19 外部テーブル 動作確認手順 ───
+
+    USE DATABASE ${snowflake_database.raw_db.name};
+    USE SCHEMA ${snowflake_schema.covid19.name};
+    USE WAREHOUSE ${snowflake_warehouse.sandbox.name};
+    USE ROLE ${snowflake_account_role.sandbox_role.name};
+
+    -- 1. ステージ確認（S3のファイル一覧）
+    LIST @${snowflake_stage.covid19_s3_stage.name};
+
+    -- 2. 外部テーブルのクエリ（COPY不要・S3を直接参照）
+    SELECT COUNT(*) FROM ${snowflake_external_table.ext_jhu_timeseries.name};
+
+    -- 3. データ確認（先頭10件）
+    SELECT * FROM ${snowflake_external_table.ext_jhu_timeseries.name} LIMIT 10;
+
+    -- 4. 国別・最新日付の感染者数サマリー
+    SELECT
+        COUNTRY_REGION,
+        MAX(DATE) AS latest_date,
+        MAX(CONFIRMED) AS total_confirmed,
+        MAX(DEATHS) AS total_deaths
+    FROM ${snowflake_external_table.ext_jhu_timeseries.name}
+    WHERE PROVINCE_STATE IS NULL
+    GROUP BY COUNTRY_REGION
+    ORDER BY total_confirmed DESC
+    LIMIT 20;
+  EOT
+}
+
+output "covid19_load_instructions" {
+  description = "COVID-19 データロード手順（COPY INTO方式・参考用）"
+  value       = <<-EOT
+    ─── COVID-19 データロード手順（COPY INTO方式・参考用） ───
+
+    USE DATABASE ${snowflake_database.raw_db.name};
+    USE SCHEMA ${snowflake_schema.covid19.name};
+    USE WAREHOUSE ${snowflake_warehouse.sandbox.name};
+
+    -- 1. ステージ確認
+    LIST @${snowflake_stage.covid19_s3_stage.name};
+
+    -- 2. Rawテーブルへのロード（テーブルはdbtで作成後に実行）
+    COPY INTO RAW_JHU_TIMESERIES (
+      UID, FIPS, ISO2, ISO3, CODE3, ADMIN2,
+      LATITUDE, LONGITUDE, PROVINCE_STATE, COUNTRY_REGION,
+      DATE, CONFIRMED, DEATHS, RECOVERED
+    )
+    FROM @${snowflake_stage.covid19_s3_stage.name}
+    PATTERN = '.*jhu_csse_covid_19_timeseries_merged\\.csv'
+    FILE_FORMAT = (FORMAT_NAME = '${snowflake_database.raw_db.name}.${snowflake_schema.covid19.name}.${snowflake_file_format.csv_format.name}')
+    ON_ERROR = CONTINUE;
+
+    -- 3. 件数確認
+    SELECT COUNT(*) FROM RAW_JHU_TIMESERIES;
+
+    ※ 外部テーブル（EXT_JHU_TIMESERIES）を使用する場合、この手順は不要です
+  EOT
+}
+
 output "setup_complete_message" {
   description = "セットアップ完了メッセージ"
   value       = <<-EOT

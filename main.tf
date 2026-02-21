@@ -146,3 +146,11 @@ resource "snowflake_grant_account_role" "user_role" {
   role_name = snowflake_account_role.sandbox_role.name
   user_name = snowflake_user.sandbox_user.name
 }
+
+# アカウント管理者ユーザー（MAIN）へのロール付与
+resource "snowflake_grant_account_role" "main_user_sandbox_role" {
+  provider = snowflake.securityadmin
+
+  role_name = snowflake_account_role.sandbox_role.name
+  user_name = "MAIN"
+}
