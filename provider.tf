@@ -44,10 +44,12 @@ provider "snowflake" {
 
   # v2.13.0 でプレビュー機能として扱われるリソースを明示的に有効化
   preview_features_enabled = [
-    "snowflake_stage_resource",         # 外部ステージ
-    "snowflake_file_format_resource",   # ファイルフォーマット
-    "snowflake_table_resource",         # テーブル
-    "snowflake_external_table_resource", # 外部テーブル
+    "snowflake_stage_resource",              # 外部ステージ
+    "snowflake_file_format_resource",        # ファイルフォーマット
+    "snowflake_table_resource",              # テーブル
+    "snowflake_external_table_resource",     # 外部テーブル
+    "snowflake_materialized_view_resource",  # マテリアライズドビュー
+    "snowflake_semantic_view_resource",      # セマンティックビュー（Cortex Agent用）
   ]
 }
 

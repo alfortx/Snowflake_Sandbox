@@ -189,6 +189,35 @@ output "covid19_load_instructions" {
   EOT
 }
 
+# =============================================================================
+# Snowflake Intelligence / Cortex Agent
+# =============================================================================
+output "cortex_agent_info" {
+  description = "Cortex Agent の接続・確認情報"
+  value       = <<-EOT
+    ─── Cortex Agent 確認手順 ───
+
+    【Snowflake 上で確認】
+      -- セマンティックビューの確認
+      SHOW SEMANTIC VIEWS IN SCHEMA ${snowflake_database.cortex.name}.${snowflake_schema.semantic_models.name};
+
+      -- エージェントの確認
+      SHOW AGENTS IN SCHEMA ${snowflake_database.cortex.name}.${var.cortex_agents_schema_name};
+
+    【Snowflake Intelligence から使う】
+      1. Snowsight にログイン（ロール: ${var.cortex_role_name}）
+      2. 左メニュー「AI & ML」→「Intelligence」を選択
+      3. エージェント「${var.agent_name}」をクリック
+      4. 日本語で質問を入力！
+
+    【サンプル質問】
+      - 日本の月別感染者数の推移を教えてください
+      - ワクチン接種率トップ10の国はどこですか？
+      - 大陸別のワクチン接種率を比較してください
+      - アジアの致死率を国別に教えてください
+  EOT
+}
+
 output "setup_complete_message" {
   description = "セットアップ完了メッセージ"
   value       = <<-EOT

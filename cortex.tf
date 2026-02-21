@@ -53,10 +53,11 @@ resource "snowflake_schema" "search_services" {
 resource "snowflake_stage" "semantic_model_files" {
   provider = snowflake.sysadmin
 
-  name     = var.semantic_model_stage_name
-  database = snowflake_database.cortex.name
-  schema   = snowflake_schema.semantic_models.name
-  comment  = "Cortex Analyst 用セマンティックモデル YAML ファイルを格納する内部ステージ"
+  name             = var.semantic_model_stage_name
+  database         = snowflake_database.cortex.name
+  schema           = snowflake_schema.semantic_models.name
+  comment          = "Cortex Analyst 用セマンティックモデル YAML ファイルを格納する内部ステージ"
+  directory        = "ENABLE = true"
 }
 
 # -----------------------------------------------------------------------------
@@ -163,4 +164,56 @@ resource "snowflake_grant_account_role" "cortex_role_to_user" {
   provider  = snowflake.securityadmin
   role_name = snowflake_account_role.cortex_role.name
   user_name = snowflake_user.sandbox_user.name
+}
+
+# =============================================================================
+# RAW_DB へのアクセス権限（Cortex Analyst がセマンティックモデルのデータを参照するため）
+# CORTEX_ROLE が MV_JHU_TIMESERIES と MV_COVID19_WORLD_TESTING を SELECT できる必要がある
+# =============================================================================
+
+# RAW_DB データベースへの USAGE 権限
+resource "snowflake_grant_privileges_to_account_role" "cortex_raw_db_usage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.cortex_role.name
+  privileges        = ["USAGE"]
+
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = snowflake_database.raw_db.name
+  }
+}
+
+# RAW_DB.COVID19 スキーマへの USAGE 権限
+resource "snowflake_grant_privileges_to_account_role" "cortex_covid19_schema_usage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.cortex_role.name
+  privileges        = ["USAGE"]
+
+  on_schema {
+    schema_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\""
+  }
+}
+
+# MV_JHU_TIMESERIES への SELECT 権限
+resource "snowflake_grant_privileges_to_account_role" "cortex_mv_jhu_select" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.cortex_role.name
+  privileges        = ["SELECT"]
+
+  on_schema_object {
+    object_type = "MATERIALIZED VIEW"
+    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_jhu_timeseries.name}\""
+  }
+}
+
+# MV_COVID19_WORLD_TESTING への SELECT 権限
+resource "snowflake_grant_privileges_to_account_role" "cortex_mv_world_testing_select" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.cortex_role.name
+  privileges        = ["SELECT"]
+
+  on_schema_object {
+    object_type = "MATERIALIZED VIEW"
+    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_covid19_world_testing.name}\""
+  }
 }

@@ -246,6 +246,82 @@ Snowflake接続情報やリソース名が一覧表示されます。
 
 ---
 
+## STEP 6: Cortex Analyst のセットアップ
+
+> ⚠️ **STEP 6 はユーザー自身が端末で実行する手順です。** Terraform では自動化できません。
+
+Cortex Analyst を使うと、自然言語（日本語）で COVID-19 データに質問できます。
+セマンティックモデル（データの意味を定義した YAML ファイル）を Snowflake ステージにアップロードして使います。
+
+### 6-1. Snowflake CLI をインストールする（初回のみ）
+
+`snow` CLI（推奨）または `snowsql` のどちらかをインストールします。
+
+#### snow CLI（推奨）
+
+```bash
+# macOS (Homebrew)
+brew install snowflake-cli
+
+# インストール確認
+snow --version
+```
+
+#### snowsql（代替）
+
+```bash
+# macOS (Homebrew)
+brew install --cask snowflake-snowsql
+
+# インストール確認
+snowsql --version
+```
+
+> どちらかが入っていれば OK です。すでにインストール済みの場合はスキップしてください。
+
+---
+
+### 6-2. スクリプトに実行権限を付与する
+
+**リポジトリをクローン・コピーした直後、または端末が変わった際に1回実行してください。**
+
+```bash
+chmod +x scripts/upload_semantic_model.sh
+```
+
+> Git はファイルの実行権限を保持しますが、macOS の一部の環境や別の端末ではリセットされることがあります。
+
+---
+
+### 6-3. セマンティックモデルをアップロードする
+
+環境変数を読み込んだ状態でスクリプトを実行します。
+
+```bash
+set -a && source .env && set +a
+bash scripts/upload_semantic_model.sh
+```
+
+---
+
+### 6-3. Snowsight から Cortex Analyst を使う
+
+1. [Snowflake WebUI](https://app.snowflake.com/) にログイン
+2. ロールを **`CORTEX_ROLE`** に切り替える
+3. 左メニュー「**AI & ML**」→「**Cortex Analyst**」を選択
+4. 「Select a semantic model file」をクリック
+5. `CORTEX_DB` → `SEMANTIC_MODELS` → `SEMANTIC_MODEL_FILES` を選択
+6. `semantic_model_covid19.yaml` を選択
+7. 日本語で質問を入力！
+
+**サンプル質問:**
+- 日本のCOVID-19感染者数の月別推移を教えてください
+- ワクチン完全接種率が高い国のトップ10を教えてください
+- 大陸ごとのワクチン接種状況を比較してください
+- アジア各国の感染者数とワクチン接種率を比較してください
+
+---
+
 ## リソースの削除
 
 **⚠️ 注意: すべてのリソースとデータが削除されます。**

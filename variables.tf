@@ -161,3 +161,25 @@ variable "cortex_role_name" {
   default     = "CORTEX_ROLE"
 }
 
+# =============================================================================
+# Snowflake Intelligence / Cortex Agent 変数
+# =============================================================================
+
+variable "cortex_agents_schema_name" {
+  description = "Cortex Agent を配置するスキーマ名"
+  type        = string
+  default     = "AGENTS"
+}
+
+variable "semantic_view_name" {
+  description = "Cortex Agent が使用する SQL ベースのセマンティックビュー名"
+  type        = string
+  default     = "COVID19_SEMANTIC"
+}
+
+variable "agent_name" {
+  description = "Snowflake Intelligence から呼び出す Cortex Agent 名"
+  type        = string
+  default     = "COVID19_AGENT"
+}
+

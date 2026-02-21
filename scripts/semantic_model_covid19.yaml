@@ -1,0 +1,344 @@
+name: covid19_analysis
+description: |
+  COVID-19パンデミック分析モデル。
+  JHUの時系列データ（感染者数・死者数・回復者数）と
+  Our World in Dataのワールドデータ（検査・ワクチン・入院・社会経済指標）を統合します。
+  ※ JHUデータは province_state IS NULL フィルターで国レベルに絞り込んでください。
+tables:
+  - name: jhu_timeseries
+    description: |
+      Johns Hopkins大学のCOVID-19時系列データ（MV_JHU_TIMESERIES）。
+      国・州レベルの感染者数、死者数、回復者数を含む。
+      PROVINCE_STATE IS NULL が国全体の集計行。
+    base_table:
+      database: RAW_DB
+      schema: COVID19
+      table: MV_JHU_TIMESERIES
+    dimensions:
+      - name: country_region
+        synonyms:
+          - country
+          - nation
+          - region
+          - 国
+          - 国名
+          - 地域
+        description: 国または地域の名前（例：Japan, US, Brazil）
+        expr: COUNTRY_REGION
+        data_type: TEXT
+        sample_values:
+          - Japan
+          - US
+          - Brazil
+          - India
+          - United Kingdom
+          - France
+          - Germany
+      - name: iso3
+        synonyms:
+          - 3文字国コード
+          - country code
+          - iso code
+          - 国コード
+        description: ISO 3文字国コード（例：JPN, USA, BRA）
+        expr: ISO3
+        data_type: TEXT
+        sample_values:
+          - JPN
+          - USA
+          - BRA
+          - IND
+          - GBR
+          - FRA
+          - DEU
+      - name: province_state
+        synonyms:
+          - province
+          - state
+          - 州
+          - 省
+          - 都道府県
+        description: 州・省の名前。NULL の場合は国全体の集計行
+        expr: PROVINCE_STATE
+        data_type: TEXT
+    time_dimensions:
+      - name: date
+        synonyms:
+          - day
+          - 期間
+          - 日
+          - 日付
+          - 年月日
+        description: データの記録日
+        expr: DATE
+        data_type: DATE
+    facts:
+      - name: case_fatality_rate
+        synonyms:
+          - CFR
+          - fatality rate
+          - 死亡率
+          - 致死率
+        description: 感染確認者数に対する死者数の割合（%）
+        expr: CASE WHEN CONFIRMED > 0 THEN ROUND(DEATHS / CONFIRMED * 100, 2) ELSE NULL END
+        data_type: NUMBER
+      - name: confirmed
+        synonyms:
+          - cases
+          - confirmed cases
+          - 感染者数
+          - 陽性者数
+          - 累計感染者数
+        description: 累計のCOVID-19感染確認者数
+        expr: CONFIRMED
+        data_type: NUMBER
+      - name: deaths
+        synonyms:
+          - fatalities
+          - mortality
+          - 死者数
+          - 死亡者数
+          - 累計死者数
+        description: 累計のCOVID-19による死者数
+        expr: DEATHS
+        data_type: NUMBER
+      - name: recovered
+        synonyms:
+          - recoveries
+          - 回復者数
+          - 完治者数
+          - 累計回復者数
+        description: 累計のCOVID-19からの回復者数
+        expr: RECOVERED
+        data_type: NUMBER
+    filters:
+      - name: country_level_only
+        synonyms:
+          - country level
+          - 国レベル
+          - 国全体
+        description: 州・省データを除外し、国全体のデータのみ対象にする
+        expr: PROVINCE_STATE IS NULL
+    primary_key:
+      columns:
+        - ISO3
+        - DATE
+  - name: world_testing
+    description: |
+      Our World in DataのCOVID-19ワールドデータ（MV_COVID19_WORLD_TESTING）。
+      国レベルの検査数、ワクチン接種数、入院患者数、社会経済指標を含む。
+    base_table:
+      database: RAW_DB
+      schema: COVID19
+      table: MV_COVID19_WORLD_TESTING
+    dimensions:
+      - name: continent
+        synonyms:
+          - world region
+          - 大陸
+          - 地域区分
+        description: 大陸名
+        expr: CONTINENT
+        data_type: TEXT
+        sample_values:
+          - Asia
+          - Europe
+          - North America
+          - South America
+          - Africa
+          - Oceania
+      - name: iso_code
+        synonyms:
+          - country code
+          - iso3 code
+          - ISOコード
+          - 国コード
+        description: ISO国コード
+        expr: ISO_CODE
+        data_type: TEXT
+        sample_values:
+          - JPN
+          - USA
+          - BRA
+          - IND
+          - GBR
+      - name: location
+        synonyms:
+          - country
+          - nation
+          - 国
+          - 国名
+          - 地域
+        description: 国または地域の名前
+        expr: LOCATION
+        data_type: TEXT
+        sample_values:
+          - Japan
+          - United States
+          - Brazil
+          - India
+          - United Kingdom
+    time_dimensions:
+      - name: date
+        synonyms:
+          - day
+          - 期間
+          - 日
+          - 日付
+        description: データの記録日
+        expr: DATE
+        data_type: DATE
+    facts:
+      - name: gdp_per_capita
+        synonyms:
+          - GDP
+          - 一人当たりGDP
+        description: 一人当たりGDP（米ドル）
+        expr: GDP_PER_CAPITA
+        data_type: NUMBER
+      - name: life_expectancy
+        synonyms:
+          - lifespan
+          - 平均寿命
+        description: 平均寿命（年）
+        expr: LIFE_EXPECTANCY
+        data_type: NUMBER
+      - name: new_cases
+        synonyms:
+          - daily cases
+          - 新規感染者数
+          - 日次感染者数
+        description: 日次の新規感染者数
+        expr: NEW_CASES
+        data_type: NUMBER
+      - name: new_deaths
+        synonyms:
+          - daily deaths
+          - 新規死者数
+          - 日次死者数
+        description: 日次の新規死者数
+        expr: NEW_DEATHS
+        data_type: NUMBER
+      - name: people_fully_vaccinated
+        synonyms:
+          - fully vaccinated
+          - ワクチン完全接種者数
+          - 完全接種者数
+        description: ワクチン接種シリーズを完了した人数
+        expr: PEOPLE_FULLY_VACCINATED
+        data_type: NUMBER
+      - name: population
+        synonyms:
+          - total population
+          - 人口
+          - 総人口
+        description: 国の総人口
+        expr: POPULATION
+        data_type: NUMBER
+      - name: positive_rate
+        synonyms:
+          - positivity rate
+          - 検査陽性率
+          - 陽性率
+        description: COVID-19検査の陽性率（0〜1スケール）
+        expr: POSITIVE_RATE
+        data_type: NUMBER
+      - name: total_cases
+        synonyms:
+          - cumulative cases
+          - 総感染者数
+          - 累計感染者数
+        description: 累計COVID-19感染者数
+        expr: TOTAL_CASES
+        data_type: NUMBER
+      - name: total_deaths
+        synonyms:
+          - cumulative deaths
+          - 総死亡者数
+          - 累計死者数
+        description: 累計COVID-19死者数
+        expr: TOTAL_DEATHS
+        data_type: NUMBER
+      - name: total_tests
+        synonyms:
+          - cumulative tests
+          - 総検査数
+          - 累計検査数
+        description: 累計のCOVID-19検査数
+        expr: TOTAL_TESTS
+        data_type: NUMBER
+      - name: total_vaccinations
+        synonyms:
+          - cumulative vaccinations
+          - ワクチン接種総数
+          - 累計ワクチン接種数
+        description: 投与されたワクチンの累計回数
+        expr: TOTAL_VACCINATIONS
+        data_type: NUMBER
+      - name: vaccination_coverage_pct
+        synonyms:
+          - vaccination rate
+          - ワクチン接種率
+          - 完全接種率
+        description: 人口に対するワクチン完全接種者の割合（%）
+        expr: CASE WHEN POPULATION > 0 THEN ROUND(PEOPLE_FULLY_VACCINATED / POPULATION * 100, 1) ELSE NULL END
+        data_type: NUMBER
+    primary_key:
+      columns:
+        - ISO_CODE
+        - DATE
+relationships:
+  - name: jhu_to_world_testing
+    left_table: jhu_timeseries
+    right_table: world_testing
+    relationship_columns:
+      - left_column: iso3
+        right_column: ISO_CODE
+      - left_column: date
+        right_column: DATE
+verified_queries:
+  - name: japan_monthly_trend
+    question: 日本のCOVID-19感染者数と死者数の月別推移を教えてください
+    use_as_onboarding_question: true
+    sql: |
+      SELECT
+        DATE_TRUNC('month', DATE) AS month,
+        MAX(CONFIRMED) AS cumulative_confirmed,
+        MAX(DEATHS) AS cumulative_deaths
+      FROM RAW_DB.COVID19.MV_JHU_TIMESERIES
+      WHERE COUNTRY_REGION = 'Japan' AND PROVINCE_STATE IS NULL
+      GROUP BY 1
+      ORDER BY 1
+    verified_by: admin
+    verified_at: 1771545600
+  - name: top10_vaccination_rate
+    question: ワクチン完全接種率が高い国のトップ10を教えてください
+    use_as_onboarding_question: true
+    sql: |
+      SELECT
+        LOCATION,
+        MAX(PEOPLE_FULLY_VACCINATED) AS fully_vaccinated,
+        MAX(POPULATION) AS population,
+        ROUND(MAX(PEOPLE_FULLY_VACCINATED) / NULLIF(MAX(POPULATION), 0) * 100, 1) AS vaccination_rate_pct
+      FROM RAW_DB.COVID19.MV_COVID19_WORLD_TESTING
+      WHERE PEOPLE_FULLY_VACCINATED IS NOT NULL AND POPULATION > 1000000
+      GROUP BY LOCATION
+      ORDER BY vaccination_rate_pct DESC
+      LIMIT 10
+    verified_by: admin
+    verified_at: 1771545600
+  - name: continent_comparison
+    question: 大陸ごとのワクチン接種率を比較してください
+    use_as_onboarding_question: true
+    sql: |
+      SELECT
+        CONTINENT,
+        SUM(PEOPLE_FULLY_VACCINATED) AS total_fully_vaccinated,
+        SUM(POPULATION) AS total_population,
+        ROUND(SUM(PEOPLE_FULLY_VACCINATED) / NULLIF(SUM(POPULATION), 0) * 100, 1) AS vaccination_rate_pct
+      FROM RAW_DB.COVID19.MV_COVID19_WORLD_TESTING
+      WHERE CONTINENT IS NOT NULL
+      GROUP BY CONTINENT
+      ORDER BY vaccination_rate_pct DESC
+    verified_by: admin
+    verified_at: 1771545600
