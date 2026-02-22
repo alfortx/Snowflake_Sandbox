@@ -38,28 +38,28 @@ resource "snowflake_semantic_view" "covid19" {
   database = snowflake_database.cortex.name
   schema   = snowflake_schema.semantic_models.name
   name     = var.semantic_view_name
-  comment  = "COVID-19分析用セマンティックビュー（JHU時系列 × OWID ワクチン・検査データ統合）"
+  comment  = "COVID-19分析用セマンティックビュー"
 
   # --- 論理テーブル定義 ---
   tables {
-    table_alias = "jhu"
+    table_alias = "JHU_TIMESERIES"
     table_name  = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_jhu_timeseries.name}\""
     primary_key = ["ISO3", "DATE"]
   }
   tables {
-    table_alias = "world"
+    table_alias = "WORLD_TESTING"
     table_name  = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_covid19_world_testing.name}\""
     primary_key = ["ISO_CODE", "DATE"]
   }
 
-  # --- テーブル間リレーション: jhu LEFT OUTER JOIN world on iso3=iso_code, date=date ---
+  # --- テーブル間リレーション: JHU_TIMESERIES LEFT OUTER JOIN WORLD_TESTING on iso3=iso_code, date=date ---
   relationships {
-    relationship_identifier = "jhu_to_world"
+    relationship_identifier = "JHU_TO_WORLD"
     table_name_or_alias {
-      table_alias = "jhu"
+      table_alias = "JHU_TIMESERIES"
     }
     referenced_table_name_or_alias {
-      table_alias = "world"
+      table_alias = "WORLD_TESTING"
     }
     relationship_columns            = ["ISO3", "DATE"]
     referenced_relationship_columns = ["ISO_CODE", "DATE"]
@@ -67,107 +67,112 @@ resource "snowflake_semantic_view" "covid19" {
 
   # --- ディメンション（絞り込み・グルーピング軸）---
   dimensions {
-    qualified_expression_name = "\"jhu\".\"COUNTRY_REGION\""
-    sql_expression            = "\"jhu\".\"COUNTRY_REGION\""
-    comment                   = "国または地域の名前（例：Japan, US）"
+    qualified_expression_name = "\"JHU_TIMESERIES\".\"COUNTRY_REGION\""
+    sql_expression            = "\"JHU_TIMESERIES\".\"COUNTRY_REGION\""
+    comment                   = "国または地域の名前"
     synonym                   = toset(["country", "nation", "国", "国名", "地域"])
   }
   dimensions {
-    qualified_expression_name = "\"jhu\".\"PROVINCE_STATE\""
-    sql_expression            = "\"jhu\".\"PROVINCE_STATE\""
-    comment                   = "州・省の名前。NULL の場合は国全体の集計行"
-    synonym                   = toset(["state", "province", "州", "省"])
+    qualified_expression_name = "\"JHU_TIMESERIES\".\"ISO3\""
+    sql_expression            = "\"JHU_TIMESERIES\".\"ISO3\""
+    comment                   = "ISO 3文字国コード"
+    synonym                   = toset(["country code", "iso code", "国コード"])
   }
   dimensions {
-    qualified_expression_name = "\"jhu\".\"ISO3\""
-    sql_expression            = "\"jhu\".\"ISO3\""
-    comment                   = "ISO 3文字国コード（例：JPN, USA）"
-    synonym                   = toset(["iso code", "country code", "国コード"])
+    qualified_expression_name = "\"JHU_TIMESERIES\".\"PROVINCE_STATE\""
+    sql_expression            = "\"JHU_TIMESERIES\".\"PROVINCE_STATE\""
+    comment                   = "州・省の名前。NULLは国全体"
+    synonym                   = toset(["province", "state", "州", "省"])
   }
   dimensions {
-    qualified_expression_name = "\"world\".\"CONTINENT\""
-    sql_expression            = "\"world\".\"CONTINENT\""
-    comment                   = "大陸名（Asia, Europe 等）"
-    synonym                   = toset(["大陸", "continent", "地域区分"])
+    qualified_expression_name = "\"JHU_TIMESERIES\".\"DATE\""
+    sql_expression            = "\"JHU_TIMESERIES\".\"DATE\""
+    comment                   = "記録日"
+  }
+  dimensions {
+    qualified_expression_name = "\"WORLD_TESTING\".\"CONTINENT\""
+    sql_expression            = "\"WORLD_TESTING\".\"CONTINENT\""
+    comment                   = "大陸名"
+    synonym                   = toset(["continent", "大陸", "地域区分"])
   }
 
   # --- ファクト（生の数値列）---
   facts {
-    qualified_expression_name = "\"jhu\".\"CONFIRMED\""
-    sql_expression            = "\"jhu\".\"CONFIRMED\""
+    qualified_expression_name = "\"JHU_TIMESERIES\".\"CONFIRMED\""
+    sql_expression            = "\"JHU_TIMESERIES\".\"CONFIRMED\""
     comment                   = "累計感染確認者数"
-    synonym                   = toset(["cases", "感染者数", "累計感染者数", "陽性者数"])
+    synonym                   = toset(["cases", "感染者数", "陽性者数", "累計感染者数"])
   }
   facts {
-    qualified_expression_name = "\"jhu\".\"DEATHS\""
-    sql_expression            = "\"jhu\".\"DEATHS\""
+    qualified_expression_name = "\"JHU_TIMESERIES\".\"DEATHS\""
+    sql_expression            = "\"JHU_TIMESERIES\".\"DEATHS\""
     comment                   = "累計死者数"
     synonym                   = toset(["fatalities", "死者数", "死亡者数", "累計死者数"])
   }
   facts {
-    qualified_expression_name = "\"jhu\".\"RECOVERED\""
-    sql_expression            = "\"jhu\".\"RECOVERED\""
+    qualified_expression_name = "\"JHU_TIMESERIES\".\"RECOVERED\""
+    sql_expression            = "\"JHU_TIMESERIES\".\"RECOVERED\""
     comment                   = "累計回復者数"
     synonym                   = toset(["recoveries", "回復者数", "完治者数"])
   }
   facts {
-    qualified_expression_name = "\"world\".\"NEW_CASES\""
-    sql_expression            = "\"world\".\"NEW_CASES\""
+    qualified_expression_name = "\"WORLD_TESTING\".\"GDP_PER_CAPITA\""
+    sql_expression            = "\"WORLD_TESTING\".\"GDP_PER_CAPITA\""
+    comment                   = "一人当たりGDP"
+    synonym                   = toset(["GDP", "一人当たりGDP"])
+  }
+  facts {
+    qualified_expression_name = "\"WORLD_TESTING\".\"NEW_CASES\""
+    sql_expression            = "\"WORLD_TESTING\".\"NEW_CASES\""
     comment                   = "日次新規感染者数"
     synonym                   = toset(["daily cases", "新規感染者数", "日次感染者数"])
   }
   facts {
-    qualified_expression_name = "\"world\".\"NEW_DEATHS\""
-    sql_expression            = "\"world\".\"NEW_DEATHS\""
+    qualified_expression_name = "\"WORLD_TESTING\".\"NEW_DEATHS\""
+    sql_expression            = "\"WORLD_TESTING\".\"NEW_DEATHS\""
     comment                   = "日次新規死者数"
     synonym                   = toset(["daily deaths", "新規死者数"])
   }
   facts {
-    qualified_expression_name = "\"world\".\"TOTAL_VACCINATIONS\""
-    sql_expression            = "\"world\".\"TOTAL_VACCINATIONS\""
-    comment                   = "ワクチン接種総回数（累計）"
-    synonym                   = toset(["累計ワクチン接種数", "ワクチン接種総数"])
-  }
-  facts {
-    qualified_expression_name = "\"world\".\"PEOPLE_FULLY_VACCINATED\""
-    sql_expression            = "\"world\".\"PEOPLE_FULLY_VACCINATED\""
-    comment                   = "ワクチン接種シリーズを完了した人数"
+    qualified_expression_name = "\"WORLD_TESTING\".\"PEOPLE_FULLY_VACCINATED\""
+    sql_expression            = "\"WORLD_TESTING\".\"PEOPLE_FULLY_VACCINATED\""
+    comment                   = "ワクチン接種完了者数"
     synonym                   = toset(["fully vaccinated", "ワクチン完全接種者数", "完全接種者数"])
   }
   facts {
-    qualified_expression_name = "\"world\".\"POPULATION\""
-    sql_expression            = "\"world\".\"POPULATION\""
+    qualified_expression_name = "\"WORLD_TESTING\".\"POPULATION\""
+    sql_expression            = "\"WORLD_TESTING\".\"POPULATION\""
     comment                   = "国の総人口"
-    synonym                   = toset(["人口", "総人口", "population"])
+    synonym                   = toset(["population", "人口", "総人口"])
   }
   facts {
-    qualified_expression_name = "\"world\".\"TOTAL_TESTS\""
-    sql_expression            = "\"world\".\"TOTAL_TESTS\""
+    qualified_expression_name = "\"WORLD_TESTING\".\"TOTAL_TESTS\""
+    sql_expression            = "\"WORLD_TESTING\".\"TOTAL_TESTS\""
     comment                   = "累計検査数"
     synonym                   = toset(["総検査数", "累計検査数"])
   }
   facts {
-    qualified_expression_name = "\"world\".\"GDP_PER_CAPITA\""
-    sql_expression            = "\"world\".\"GDP_PER_CAPITA\""
-    comment                   = "一人当たりGDP（米ドル）"
-    synonym                   = toset(["GDP", "一人当たりGDP"])
+    qualified_expression_name = "\"WORLD_TESTING\".\"TOTAL_VACCINATIONS\""
+    sql_expression            = "\"WORLD_TESTING\".\"TOTAL_VACCINATIONS\""
+    comment                   = "ワクチン接種総回数"
+    synonym                   = toset(["ワクチン接種総数", "累計ワクチン接種数"])
   }
 
   # --- メトリクス（集計計算式）---
   metrics {
     semantic_expression {
-      qualified_expression_name = "\"jhu\".\"CASE_FATALITY_RATE\""
-      sql_expression            = "CASE WHEN SUM(\"jhu\".\"CONFIRMED\") > 0 THEN ROUND(SUM(\"jhu\".\"DEATHS\") / SUM(\"jhu\".\"CONFIRMED\") * 100, 2) ELSE NULL END"
-      comment                   = "感染確認者数に対する死者数の割合（%）"
-      synonym                   = toset(["CFR", "致死率", "死亡率", "fatality rate"])
+      qualified_expression_name = "\"JHU_TIMESERIES\".\"CASE_FATALITY_RATE\""
+      sql_expression            = "CASE WHEN SUM(\"JHU_TIMESERIES\".\"CONFIRMED\") > 0 THEN ROUND(SUM(\"JHU_TIMESERIES\".\"DEATHS\") / SUM(\"JHU_TIMESERIES\".\"CONFIRMED\") * 100, 2) ELSE NULL END"
+      comment                   = "致死率（%）"
+      synonym                   = toset(["CFR", "fatality rate", "死亡率", "致死率"])
     }
   }
   metrics {
     semantic_expression {
-      qualified_expression_name = "\"world\".\"VACCINATION_RATE_PCT\""
-      sql_expression            = "CASE WHEN SUM(\"world\".\"POPULATION\") > 0 THEN ROUND(SUM(\"world\".\"PEOPLE_FULLY_VACCINATED\") / SUM(\"world\".\"POPULATION\") * 100, 1) ELSE NULL END"
-      comment                   = "人口に対するワクチン完全接種者の割合（%）"
-      synonym                   = toset(["ワクチン接種率", "vaccination rate", "完全接種率"])
+      qualified_expression_name = "\"WORLD_TESTING\".\"VACCINATION_RATE_PCT\""
+      sql_expression            = "CASE WHEN SUM(\"WORLD_TESTING\".\"POPULATION\") > 0 THEN ROUND(SUM(\"WORLD_TESTING\".\"PEOPLE_FULLY_VACCINATED\") / SUM(\"WORLD_TESTING\".\"POPULATION\") * 100, 1) ELSE NULL END"
+      comment                   = "ワクチン接種率（%）"
+      synonym                   = toset(["vaccination rate", "ワクチン接種率", "完全接種率"])
     }
   }
 }
