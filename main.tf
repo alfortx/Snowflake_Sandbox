@@ -154,3 +154,29 @@ resource "snowflake_grant_account_role" "main_user_sandbox_role" {
   role_name = snowflake_account_role.sandbox_role.name
   user_name = "MAIN"
 }
+
+# =============================================================================
+# セキュリティ設定: セカンダリーロールのデフォルト無効化
+#
+# DEFAULT_SECONDARY_ROLES はユーザーレベルのパラメータ（アカウントレベルへの設定は不可）。
+# Snowflake には「新規ユーザーへ自動適用するアカウントデフォルト」の仕組みが存在しないため、
+# 既存ユーザー1人ずつに設定し、新規ユーザー追加時は snowflake_user リソースに
+# 同様の snowflake_execute を追加すること。
+# =============================================================================
+
+# sandbox_user のセカンダリーロール無効化
+resource "snowflake_execute" "disable_secondary_roles_sandbox_user" {
+  provider   = snowflake.accountadmin
+  depends_on = [snowflake_user.sandbox_user]
+
+  execute = "ALTER USER \"${snowflake_user.sandbox_user.name}\" SET DEFAULT_SECONDARY_ROLES = ()"
+  revert  = "ALTER USER \"${snowflake_user.sandbox_user.name}\" SET DEFAULT_SECONDARY_ROLES = ('ALL')"
+}
+
+# MAIN（管理者ユーザー）のセカンダリーロール無効化
+resource "snowflake_execute" "disable_secondary_roles_main_user" {
+  provider = snowflake.accountadmin
+
+  execute = "ALTER USER MAIN SET DEFAULT_SECONDARY_ROLES = ()"
+  revert  = "ALTER USER MAIN SET DEFAULT_SECONDARY_ROLES = ('ALL')"
+}
