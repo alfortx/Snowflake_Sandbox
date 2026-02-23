@@ -332,6 +332,154 @@ terraform destroy
 
 ---
 
+## アカウント再構築（Stateリセット手順）
+
+Snowflakeアカウントが削除されて新しいアカウントに再構築する場合など、
+「TerraformのStateにはリソースが存在する記録があるが、Snowflakeは空の状態」というズレが生じることがあります。
+この状態でそのまま `terraform apply` しても、Terraformは「すでに作成済み」と判断して何もしません。
+
+> **なぜStateを削除するのか？**
+> 旧アカウントが完全に消滅しているため、State内の全リソース情報が無効です。
+> `terraform destroy`（Stateを元に削除）も実行できないため、Stateをリセットするのが最も確実な対処法です。
+
+---
+
+### 手順
+
+#### 1. 認証情報を更新する
+
+`.env` を開き、新しいSnowflakeアカウントの情報に書き換えます。
+
+```bash
+SNOWFLAKE_ORGANIZATION_NAME=新しい組織名
+SNOWFLAKE_ACCOUNT_NAME=新しいアカウント名
+SNOWFLAKE_USER=管理者ユーザー名
+SNOWFLAKE_PASSWORD=管理者パスワード
+```
+
+取得方法はSTEP 2-1を参照してください。
+
+#### 2. Stateファイルをバックアップして削除する
+
+万が一のためにバックアップを取ってから削除します。
+
+```bash
+# バックアップ作成
+cp terraform.tfstate terraform.tfstate.old_account_backup
+
+# Stateファイルを削除
+rm terraform.tfstate terraform.tfstate.backup
+```
+
+> `terraform.tfstate.*.backup` など他のバックアップファイルは残しておいても問題ありません。
+
+#### 3. 環境変数を読み込む
+
+```bash
+set -a && source .env && set +a
+```
+
+#### 4. Terraformを初期化する
+
+```bash
+terraform init
+```
+
+#### 5. 実行計画を確認する（任意）
+
+Stateが空になったため、今度は全リソースが「新規作成」として表示されます。
+
+```bash
+terraform plan
+# Plan: XX to add, 0 to change, 0 to destroy. と表示されるはず
+```
+
+#### 6. リソースを再作成する
+
+```bash
+terraform apply
+```
+
+`yes` と入力して実行します。完了後、Cortex AnalystのセットアップはSTEP 6を参照してください。
+
+---
+
+## Snowflakeのみ再構築（AWSリソースはそのまま）
+
+Snowflakeアカウントを再作成したが、AWSのS3バケットやIAMロールはそのまま残っている場合の手順です。
+
+> **前のセクションの手順（Stateファイルをまるごと削除）は使えません。**
+> Stateを全削除すると、Terraformが「S3バケット/IAMロールがまだない」と判断して再作成しようとしますが、
+> AWSには実物が既に存在するためエラーになります。
+
+**SnowflakeリソースのみStateから削除する**のが正しい対処法です。
+
+### Terraformが自動で行うこと
+
+Snowflake側の Storage Integration を再作成すると、SnowflakeのIAMユーザーARNが変わります。
+`aws.tf`のIAMロールtrust policyはそのARNを直接参照しているため、Terraformが変化を検出して**IAMロールのtrust policyを自動更新**します。手動での修正は不要です。
+
+---
+
+### 手順
+
+#### 1. 認証情報を更新して環境変数を読み込む
+
+`.env` を新しいSnowflakeアカウントの情報に書き換えてから読み込みます。
+
+```bash
+set -a && source .env && set +a
+```
+
+#### 2. Stateに登録されているリソースを確認する
+
+```bash
+terraform state list
+```
+
+`snowflake_` で始まるリソースと `aws_` で始まるリソースが混在して表示されます。
+
+#### 3. SnowflakeリソースのみStateから削除する
+
+```bash
+terraform state list | grep "^snowflake_" | xargs terraform state rm
+```
+
+> **何をしているか：**
+> `terraform state list` で全リソース名を取得 → `grep "^snowflake_"` でSnowflakeリソースのみ抽出 →
+> `xargs terraform state rm` で1件ずつStateから削除
+
+#### 4. 削除結果を確認する（任意）
+
+```bash
+terraform state list
+# aws_ リソースのみ表示されればOK
+```
+
+#### 5. 実行計画を確認する
+
+```bash
+terraform plan
+```
+
+以下のような内容が表示されるはずです。
+
+```
+# snowflake_database.sandbox    → will be created  （Snowflakeリソースは新規作成）
+# aws_iam_role.snowflake_s3_role → will be updated  （trust policyのARN更新）
+# aws_s3_bucket.external_table_data → no changes    （S3バケットは変更なし）
+```
+
+#### 6. リソースを再作成する
+
+```bash
+terraform apply
+```
+
+`yes` と入力して実行します。完了後、Cortex AnalystのセットアップはSTEP 6を参照してください。
+
+---
+
 ## ファイル構成
 
 ```
