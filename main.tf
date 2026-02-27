@@ -49,11 +49,18 @@ resource "snowflake_warehouse" "sandbox" {
 # ロールの作成
 # SECURITYADMIN: Roleの作成と管理
 # =============================================================================
-resource "snowflake_account_role" "sandbox_role" {
+resource "snowflake_account_role" "developer_role" {
   provider = snowflake.securityadmin
 
-  name    = var.role_name
-  comment = "サンドボックス環境で作業するためのロール"
+  name    = var.developer_role_name
+  comment = "開発者用ロール（読み書き権限）"
+}
+
+resource "snowflake_account_role" "analyst_role" {
+  provider = snowflake.securityadmin
+
+  name    = var.analyst_role_name
+  comment = "分析者用ロール（読み取り専用）"
 }
 
 # =============================================================================
@@ -69,7 +76,7 @@ resource "snowflake_user" "sandbox_user" {
   display_name = "Sandbox User"
 
   # デフォルトロールを設定
-  default_role = snowflake_account_role.sandbox_role.name
+  default_role = snowflake_account_role.developer_role.name
 
   # ユーザーが最初にログインしたときのデフォルト設定
   default_warehouse = snowflake_warehouse.sandbox.name
@@ -83,11 +90,15 @@ resource "snowflake_user" "sandbox_user" {
 # SECURITYADMIN: 権限の付与と管理
 # =============================================================================
 
+# =============================================================================
+# DEVELOPER_ROLE への権限付与
+# =============================================================================
+
 # データベースの使用権限
 resource "snowflake_grant_privileges_to_account_role" "database_usage" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
   privileges        = ["USAGE"]
 
   on_account_object {
@@ -100,7 +111,7 @@ resource "snowflake_grant_privileges_to_account_role" "database_usage" {
 resource "snowflake_grant_privileges_to_account_role" "schema_privileges" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
   privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW"]
 
   on_schema {
@@ -108,11 +119,11 @@ resource "snowflake_grant_privileges_to_account_role" "schema_privileges" {
   }
 }
 
-# 今後作成されるテーブルへのSELECT権限
+# 今後作成されるテーブルへの権限（読み書き）
 resource "snowflake_grant_privileges_to_account_role" "future_tables_select" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
   privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE"]
 
   on_schema_object {
@@ -123,12 +134,69 @@ resource "snowflake_grant_privileges_to_account_role" "future_tables_select" {
   }
 }
 
-# ウェアハウスの使用権限
+# ウェアハウスの使用権限（読み書き）
 resource "snowflake_grant_privileges_to_account_role" "warehouse_usage" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
   privileges        = ["USAGE", "OPERATE"]
+
+  on_account_object {
+    object_type = "WAREHOUSE"
+    object_name = snowflake_warehouse.sandbox.name
+  }
+}
+
+# =============================================================================
+# ANALYST_ROLE への権限付与
+# =============================================================================
+
+# データベースの使用権限
+resource "snowflake_grant_privileges_to_account_role" "analyst_database_usage" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
+  privileges        = ["USAGE"]
+
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = snowflake_database.sandbox.name
+  }
+}
+
+# スキーマの権限（USAGE のみ）
+resource "snowflake_grant_privileges_to_account_role" "analyst_schema_usage" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
+  privileges        = ["USAGE"]
+
+  on_schema {
+    schema_name = "\"${snowflake_database.sandbox.name}\".\"${snowflake_schema.work.name}\""
+  }
+}
+
+# 今後作成されるテーブルへの権限（読み取りのみ）
+resource "snowflake_grant_privileges_to_account_role" "analyst_future_tables_select" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
+  privileges        = ["SELECT"]
+
+  on_schema_object {
+    future {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${snowflake_database.sandbox.name}\".\"${snowflake_schema.work.name}\""
+    }
+  }
+}
+
+# ウェアハウスの使用権限（USAGE のみ）
+resource "snowflake_grant_privileges_to_account_role" "analyst_warehouse_usage" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
+  privileges        = ["USAGE"]
 
   on_account_object {
     object_type = "WAREHOUSE"
@@ -140,18 +208,36 @@ resource "snowflake_grant_privileges_to_account_role" "warehouse_usage" {
 # ユーザーへのロール付与
 # SECURITYADMIN: ユーザーへのロール付与
 # =============================================================================
+
+# sandbox_user に DEVELOPER_ROLE を付与
 resource "snowflake_grant_account_role" "user_role" {
   provider = snowflake.securityadmin
 
-  role_name = snowflake_account_role.sandbox_role.name
+  role_name = snowflake_account_role.developer_role.name
   user_name = snowflake_user.sandbox_user.name
 }
 
-# アカウント管理者ユーザー（MAIN）へのロール付与
-resource "snowflake_grant_account_role" "main_user_sandbox_role" {
+# sandbox_user に ANALYST_ROLE を付与
+resource "snowflake_grant_account_role" "user_analyst_role" {
   provider = snowflake.securityadmin
 
-  role_name = snowflake_account_role.sandbox_role.name
+  role_name = snowflake_account_role.analyst_role.name
+  user_name = snowflake_user.sandbox_user.name
+}
+
+# アカウント管理者ユーザー（MAIN）へ DEVELOPER_ROLE を付与
+resource "snowflake_grant_account_role" "main_user_developer_role" {
+  provider = snowflake.securityadmin
+
+  role_name = snowflake_account_role.developer_role.name
+  user_name = "MAIN"
+}
+
+# アカウント管理者ユーザー（MAIN）へ ANALYST_ROLE を付与
+resource "snowflake_grant_account_role" "main_user_analyst_role" {
+  provider = snowflake.securityadmin
+
+  role_name = snowflake_account_role.analyst_role.name
   user_name = "MAIN"
 }
 

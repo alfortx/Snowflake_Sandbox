@@ -159,12 +159,11 @@ resource "snowflake_stage" "external_s3" {
 }
 
 # -----------------------------------------------------------------------------
-# GRANT USAGE on Stage → SANDBOX_ROLE
-#   SANDBOX_ROLEのユーザーがステージを使えるようにする
+# GRANT USAGE on Stage → DEVELOPER_ROLE / ANALYST_ROLE
 # -----------------------------------------------------------------------------
 resource "snowflake_grant_privileges_to_account_role" "stage_usage" {
   provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
   privileges        = ["USAGE"]
 
   on_schema_object {

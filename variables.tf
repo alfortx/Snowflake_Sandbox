@@ -29,10 +29,16 @@ variable "user_password" {
   default     = "ChangeMe123!" # 本番環境では必ず変更してください
 }
 
-variable "role_name" {
-  description = "作成するロール名"
+variable "developer_role_name" {
+  description = "開発者用ロール名（読み書き権限）"
   type        = string
-  default     = "SANDBOX_ROLE"
+  default     = "DEVELOPER_ROLE"
+}
+
+variable "analyst_role_name" {
+  description = "分析者用ロール名（読み取り専用）"
+  type        = string
+  default     = "ANALYST_ROLE"
 }
 
 variable "database_comment" {
@@ -183,3 +189,30 @@ variable "agent_name" {
   default     = "COVID19_AGENT"
 }
 
+# =============================================================================
+# 家計簿データ変数
+# =============================================================================
+
+variable "budget_book_schema_name" {
+  description = "家計簿データ用スキーマ名"
+  type        = string
+  default     = "BUDGET_BOOK"
+}
+
+variable "budget_book_semantic_view_name" {
+  description = "家計簿用セマンティックビュー名"
+  type        = string
+  default     = "BUDGET_BOOK_SEMANTIC"
+}
+
+variable "budget_book_search_service_name" {
+  description = "家計簿用Cortex Searchサービス名"
+  type        = string
+  default     = "BUDGET_BOOK_SEARCH"
+}
+
+variable "budget_book_agent_name" {
+  description = "家計簿用Cortex Agent名"
+  type        = string
+  default     = "BUDGET_BOOK_AGENT"
+}

@@ -54,6 +54,21 @@ resource "snowflake_stage" "covid19_s3_stage" {
   comment     = "Public S3 stage for JHU COVID-19 timeseries (no credentials required)"
 
   depends_on = [snowflake_file_format.csv_format]
+
+  # directory は ALTER STAGE で有効化済み（snowflake_execute.covid19_s3_stage_directory）
+  # Terraform定義に含めると外部テーブルが存在するため DROP できず失敗するため ignore_changes で管理
+  lifecycle {
+    ignore_changes = [directory]
+  }
+}
+
+# 外部テーブルが存在するためDROPできないので ALTER STAGE でディレクトリテーブルを有効化
+resource "snowflake_execute" "covid19_s3_stage_directory" {
+  provider   = snowflake.sysadmin
+  depends_on = [snowflake_stage.covid19_s3_stage]
+
+  execute = "ALTER STAGE \"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_s3_stage.name}\" SET DIRECTORY = (ENABLE = TRUE)"
+  revert  = "ALTER STAGE \"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_s3_stage.name}\" SET DIRECTORY = (ENABLE = FALSE)"
 }
 
 # =============================================================================
@@ -71,18 +86,32 @@ resource "snowflake_stage" "covid19_world_testing_stage" {
   comment     = "COVID-19 world cases, deaths, testing, vaccination data (JHUと結合可能)"
 
   depends_on = [snowflake_file_format.csv_format]
+
+  # directory は ALTER STAGE で有効化済み（snowflake_execute.covid19_world_testing_stage_directory）
+  # Terraform定義に含めると外部テーブルが存在するため DROP できず失敗するため ignore_changes で管理
+  lifecycle {
+    ignore_changes = [directory]
+  }
+}
+
+# 外部テーブルが存在するためDROPできないので ALTER STAGE でディレクトリテーブルを有効化
+resource "snowflake_execute" "covid19_world_testing_stage_directory" {
+  provider   = snowflake.sysadmin
+  depends_on = [snowflake_stage.covid19_world_testing_stage]
+
+  execute = "ALTER STAGE \"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_world_testing_stage.name}\" SET DIRECTORY = (ENABLE = TRUE)"
+  revert  = "ALTER STAGE \"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_world_testing_stage.name}\" SET DIRECTORY = (ENABLE = FALSE)"
 }
 
 # =============================================================================
-# SANDBOX_ROLEへの権限付与
-# SECURITYADMIN: 権限の付与と管理
+# DEVELOPER_ROLE への権限付与
 # =============================================================================
 
 # RAW_DB の USAGE 権限
 resource "snowflake_grant_privileges_to_account_role" "raw_db_usage" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
   privileges        = ["USAGE"]
 
   on_account_object {
@@ -95,7 +124,7 @@ resource "snowflake_grant_privileges_to_account_role" "raw_db_usage" {
 resource "snowflake_grant_privileges_to_account_role" "covid19_schema_privileges" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
   privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW"]
 
   on_schema {
@@ -103,11 +132,11 @@ resource "snowflake_grant_privileges_to_account_role" "covid19_schema_privileges
   }
 }
 
-# 今後作成されるテーブルへの権限
+# 今後作成されるテーブルへの権限（読み書き）
 resource "snowflake_grant_privileges_to_account_role" "covid19_future_tables" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
   privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE"]
 
   on_schema_object {
@@ -122,7 +151,7 @@ resource "snowflake_grant_privileges_to_account_role" "covid19_future_tables" {
 resource "snowflake_grant_privileges_to_account_role" "covid19_stage_usage" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
   privileges        = ["USAGE"]
 
   on_schema_object {
@@ -135,7 +164,77 @@ resource "snowflake_grant_privileges_to_account_role" "covid19_stage_usage" {
 resource "snowflake_grant_privileges_to_account_role" "covid19_world_testing_stage_usage" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
+  privileges        = ["USAGE"]
+
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_world_testing_stage.name}\""
+  }
+}
+
+# =============================================================================
+# ANALYST_ROLE への権限付与
+# =============================================================================
+
+# RAW_DB の USAGE 権限
+resource "snowflake_grant_privileges_to_account_role" "analyst_raw_db_usage" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
+  privileges        = ["USAGE"]
+
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = snowflake_database.raw_db.name
+  }
+}
+
+# COVID19 スキーマの権限（USAGE のみ）
+resource "snowflake_grant_privileges_to_account_role" "analyst_covid19_schema_usage" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
+  privileges        = ["USAGE"]
+
+  on_schema {
+    schema_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\""
+  }
+}
+
+# 今後作成されるテーブルへの権限（読み取りのみ）
+resource "snowflake_grant_privileges_to_account_role" "analyst_covid19_future_tables" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
+  privileges        = ["SELECT"]
+
+  on_schema_object {
+    future {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\""
+    }
+  }
+}
+
+# COVID19 JHU外部ステージの USAGE 権限
+resource "snowflake_grant_privileges_to_account_role" "analyst_covid19_stage_usage" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
+  privileges        = ["USAGE"]
+
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_s3_stage.name}\""
+  }
+}
+
+# COVID19 World Testing外部ステージの USAGE 権限
+resource "snowflake_grant_privileges_to_account_role" "analyst_covid19_world_testing_stage_usage" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
   privileges        = ["USAGE"]
 
   on_schema_object {
@@ -458,11 +557,11 @@ resource "snowflake_external_table" "ext_covid19_world_testing" {
   ]
 }
 
-# JHU外部テーブルへの SELECT 権限
+# JHU外部テーブルへの SELECT 権限（DEVELOPER）
 resource "snowflake_grant_privileges_to_account_role" "ext_table_select" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
   privileges        = ["SELECT"]
 
   on_schema_object {
@@ -471,11 +570,37 @@ resource "snowflake_grant_privileges_to_account_role" "ext_table_select" {
   }
 }
 
-# World Testing外部テーブルへの SELECT 権限
+# World Testing外部テーブルへの SELECT 権限（DEVELOPER）
 resource "snowflake_grant_privileges_to_account_role" "ext_world_testing_select" {
   provider = snowflake.securityadmin
 
-  account_role_name = snowflake_account_role.sandbox_role.name
+  account_role_name = snowflake_account_role.developer_role.name
+  privileges        = ["SELECT"]
+
+  on_schema_object {
+    object_type = "EXTERNAL TABLE"
+    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_external_table.ext_covid19_world_testing.name}\""
+  }
+}
+
+# JHU外部テーブルへの SELECT 権限（ANALYST）
+resource "snowflake_grant_privileges_to_account_role" "analyst_ext_table_select" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
+  privileges        = ["SELECT"]
+
+  on_schema_object {
+    object_type = "EXTERNAL TABLE"
+    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_external_table.ext_jhu_timeseries.name}\""
+  }
+}
+
+# World Testing外部テーブルへの SELECT 権限（ANALYST）
+resource "snowflake_grant_privileges_to_account_role" "analyst_ext_world_testing_select" {
+  provider = snowflake.securityadmin
+
+  account_role_name = snowflake_account_role.analyst_role.name
   privileges        = ["SELECT"]
 
   on_schema_object {

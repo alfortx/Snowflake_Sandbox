@@ -17,9 +17,14 @@ output "schema_full_name" {
   value       = "${snowflake_database.sandbox.name}.${snowflake_schema.work.name}"
 }
 
-output "role_name" {
-  description = "作成されたロール名"
-  value       = snowflake_account_role.sandbox_role.name
+output "developer_role_name" {
+  description = "開発者用ロール名"
+  value       = snowflake_account_role.developer_role.name
+}
+
+output "analyst_role_name" {
+  description = "分析者用ロール名"
+  value       = snowflake_account_role.analyst_role.name
 }
 
 output "user_name" {
@@ -41,7 +46,7 @@ output "connection_info" {
   description = "接続情報のサマリー"
   value = {
     user      = snowflake_user.sandbox_user.name
-    role      = snowflake_account_role.sandbox_role.name
+    role      = snowflake_account_role.developer_role.name
     database  = snowflake_database.sandbox.name
     schema    = snowflake_schema.work.name
     warehouse = snowflake_warehouse.sandbox.name
@@ -57,18 +62,18 @@ output "managed_access_test_instructions" {
     ─── Managed Access テスト手順 ───
 
     【1】テーブル作成（成功）
-      USE ROLE ${snowflake_account_role.sandbox_role.name};
+      USE ROLE ${snowflake_account_role.developer_role.name};
       USE DATABASE ${snowflake_database.managed_access.name};
       USE SCHEMA ${snowflake_schema.managed.name};
       CREATE TABLE my_table (id INT);
 
     【2】オブジェクト所有者による GRANT（エラー）
-      GRANT SELECT ON TABLE my_table TO ROLE ${snowflake_account_role.sandbox_role.name};
+      GRANT SELECT ON TABLE my_table TO ROLE ${snowflake_account_role.developer_role.name};
       → Managed Access制約で失敗: スキーマ所有者以外はGRANT不可
 
     【3】スキーマ所有者による GRANT（成功）
       USE ROLE ${snowflake_account_role.schema_owner_role.name};
-      GRANT SELECT ON TABLE ${snowflake_database.managed_access.name}.${snowflake_schema.managed.name}.my_table TO ROLE ${snowflake_account_role.sandbox_role.name};
+      GRANT SELECT ON TABLE ${snowflake_database.managed_access.name}.${snowflake_schema.managed.name}.my_table TO ROLE ${snowflake_account_role.developer_role.name};
   EOT
 }
 
@@ -95,7 +100,7 @@ output "external_stage_usage" {
   value       = <<-EOT
     ─── 外部ステージ 動作確認手順 ───
 
-    USE ROLE ${snowflake_account_role.sandbox_role.name};
+    USE ROLE ${snowflake_account_role.developer_role.name};
     USE DATABASE ${snowflake_database.sandbox.name};
     USE SCHEMA ${snowflake_schema.work.name};
     USE WAREHOUSE ${snowflake_warehouse.sandbox.name};
@@ -134,7 +139,7 @@ output "covid19_external_table_usage" {
     USE DATABASE ${snowflake_database.raw_db.name};
     USE SCHEMA ${snowflake_schema.covid19.name};
     USE WAREHOUSE ${snowflake_warehouse.sandbox.name};
-    USE ROLE ${snowflake_account_role.sandbox_role.name};
+    USE ROLE ${snowflake_account_role.developer_role.name};
 
     -- 1. ステージ確認（S3のファイル一覧）
     LIST @${snowflake_stage.covid19_s3_stage.name};
@@ -227,13 +232,13 @@ output "setup_complete_message" {
     - データベース: ${snowflake_database.sandbox.name}
     - スキーマ: ${snowflake_schema.work.name}
     - ウェアハウス: ${snowflake_warehouse.sandbox.name} (${snowflake_warehouse.sandbox.warehouse_size})
-    - ロール: ${snowflake_account_role.sandbox_role.name}
+    - ロール: ${snowflake_account_role.developer_role.name}
     - ユーザー: ${snowflake_user.sandbox_user.name}
 
     【次のステップ】
     1. SnowflakeのWebUIにログイン
     2. ユーザー: ${snowflake_user.sandbox_user.name} でログイン
-    3. ロール: ${snowflake_account_role.sandbox_role.name} を選択
+    3. ロール: ${snowflake_account_role.developer_role.name} を選択
     4. ウェアハウス: ${snowflake_warehouse.sandbox.name} を使用
     5. データベース: ${snowflake_database.sandbox.name} で作業開始
   EOT

@@ -27,3 +27,6 @@ Thumbs.db
 *.backup
 crash.log
 crash.*.log
+
+# サンプルデータ（個人データのため除外）
+sample_data/

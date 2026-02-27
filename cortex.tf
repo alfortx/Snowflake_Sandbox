@@ -142,6 +142,30 @@ resource "snowflake_grant_privileges_to_account_role" "semantic_model_stage" {
   }
 }
 
+# DEVELOPER_ROLE への SEMANTIC_MODEL_FILES ステージ READ 権限
+resource "snowflake_grant_privileges_to_account_role" "sandbox_semantic_model_stage_read" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.developer_role.name
+  privileges        = ["READ"]
+
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${snowflake_stage.semantic_model_files.database}\".\"${snowflake_stage.semantic_model_files.schema}\".\"${snowflake_stage.semantic_model_files.name}\""
+  }
+}
+
+# ANALYST_ROLE への SEMANTIC_MODEL_FILES ステージ READ 権限
+resource "snowflake_grant_privileges_to_account_role" "analyst_semantic_model_stage_read" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.analyst_role.name
+  privileges        = ["READ"]
+
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${snowflake_stage.semantic_model_files.database}\".\"${snowflake_stage.semantic_model_files.schema}\".\"${snowflake_stage.semantic_model_files.name}\""
+  }
+}
+
 # -----------------------------------------------------------------------------
 # SANDBOX_WH への USAGE / OPERATE 権限
 #   Cortex Analyst・Cortex Search のクエリ実行に使用

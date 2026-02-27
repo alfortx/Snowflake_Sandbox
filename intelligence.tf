@@ -188,6 +188,10 @@ resource "snowflake_execute" "semantic_view_grant" {
 
   execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" TO ROLE ${var.cortex_role_name}"
   revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.cortex_role_name}"
+
+  lifecycle {
+    replace_triggered_by = [snowflake_semantic_view.covid19]
+  }
 }
 
 # -----------------------------------------------------------------------------
@@ -276,4 +280,68 @@ resource "snowflake_execute" "agent_usage_grant" {
 
   execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" TO ROLE ${var.cortex_role_name}"
   revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" FROM ROLE ${var.cortex_role_name}"
+
+  lifecycle {
+    replace_triggered_by = [snowflake_execute.covid19_agent]
+  }
+}
+
+# -----------------------------------------------------------------------------
+# DEVELOPER_ROLE への COVID19 Cortex リソース利用権限
+# -----------------------------------------------------------------------------
+
+# COVID19_SEMANTIC セマンティックビューへの SELECT 権限（DEVELOPER_ROLE）
+resource "snowflake_execute" "covid19_semantic_view_grant_sandbox" {
+  provider   = snowflake.sysadmin
+  depends_on = [snowflake_semantic_view.covid19]
+
+  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" TO ROLE ${var.developer_role_name}"
+  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.developer_role_name}"
+
+  lifecycle {
+    replace_triggered_by = [snowflake_semantic_view.covid19]
+  }
+}
+
+# COVID19_AGENT への USAGE 権限（DEVELOPER_ROLE）
+resource "snowflake_execute" "covid19_agent_grant_sandbox" {
+  provider   = snowflake.sysadmin
+  depends_on = [snowflake_execute.covid19_agent]
+
+  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" TO ROLE ${var.developer_role_name}"
+  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" FROM ROLE ${var.developer_role_name}"
+
+  lifecycle {
+    replace_triggered_by = [snowflake_execute.covid19_agent]
+  }
+}
+
+# -----------------------------------------------------------------------------
+# ANALYST_ROLE への COVID19 Cortex リソース利用権限
+# -----------------------------------------------------------------------------
+
+# COVID19_SEMANTIC セマンティックビューへの SELECT 権限（ANALYST_ROLE）
+resource "snowflake_execute" "covid19_semantic_view_grant_analyst" {
+  provider   = snowflake.sysadmin
+  depends_on = [snowflake_semantic_view.covid19]
+
+  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" TO ROLE ${var.analyst_role_name}"
+  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.analyst_role_name}"
+
+  lifecycle {
+    replace_triggered_by = [snowflake_semantic_view.covid19]
+  }
+}
+
+# COVID19_AGENT への USAGE 権限（ANALYST_ROLE）
+resource "snowflake_execute" "covid19_agent_grant_analyst" {
+  provider   = snowflake.sysadmin
+  depends_on = [snowflake_execute.covid19_agent]
+
+  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" TO ROLE ${var.analyst_role_name}"
+  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" FROM ROLE ${var.analyst_role_name}"
+
+  lifecycle {
+    replace_triggered_by = [snowflake_execute.covid19_agent]
+  }
 }
