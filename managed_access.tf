@@ -95,33 +95,3 @@ resource "snowflake_grant_ownership" "managed_schema_to_schema_owner" {
   }
 }
 
-# =============================================================================
-# SANDBOX_ROLE の権限設定（既存ロールに新規リソースへの権限を付与）
-# =============================================================================
-
-# Managed Access DB の USAGE 権限（DEVELOPER_ROLE）
-resource "snowflake_grant_privileges_to_account_role" "sandbox_managed_db_usage" {
-  provider = snowflake.securityadmin
-
-  account_role_name = snowflake_account_role.developer_role.name
-  privileges        = ["USAGE"]
-
-  on_account_object {
-    object_type = "DATABASE"
-    object_name = snowflake_database.managed_access.name
-  }
-}
-
-# Managed Schema の USAGE + CREATE TABLE 権限（DEVELOPER_ROLE）
-resource "snowflake_grant_privileges_to_account_role" "sandbox_managed_schema" {
-  provider = snowflake.securityadmin
-
-  depends_on = [snowflake_grant_ownership.managed_schema_to_schema_owner]
-
-  account_role_name = snowflake_account_role.developer_role.name
-  privileges        = ["USAGE", "CREATE TABLE"]
-
-  on_schema {
-    schema_name = "\"${snowflake_database.managed_access.name}\".\"${snowflake_schema.managed.name}\""
-  }
-}

@@ -35,10 +35,10 @@ variable "developer_role_name" {
   default     = "DEVELOPER_ROLE"
 }
 
-variable "analyst_role_name" {
-  description = "分析者用ロール名（読み取り専用）"
+variable "viewer_role_name" {
+  description = "閲覧者用ロール名（読み取り専用）"
   type        = string
-  default     = "ANALYST_ROLE"
+  default     = "VIEWER_ROLE"
 }
 
 variable "database_comment" {
@@ -165,6 +165,88 @@ variable "cortex_role_name" {
   description = "Cortexリソースの配置・変更・利用権限を持つロール名"
   type        = string
   default     = "CORTEX_ROLE"
+}
+
+# =============================================================================
+# 機能的ロール（FR_*）変数
+# =============================================================================
+
+variable "fr_wh_sandbox_operate_role_name" {
+  description = "SANDBOX_WH USAGE+OPERATE を持つ機能的ロール名"
+  type        = string
+  default     = "FR_WH_SANDBOX_OPERATE"
+}
+
+variable "fr_wh_sandbox_use_role_name" {
+  description = "SANDBOX_WH USAGE のみを持つ機能的ロール名"
+  type        = string
+  default     = "FR_WH_SANDBOX_USE"
+}
+
+variable "fr_wh_mv_operate_role_name" {
+  description = "MV_WH USAGE+OPERATE を持つ機能的ロール名"
+  type        = string
+  default     = "FR_WH_MV_OPERATE"
+}
+
+variable "fr_wh_mv_use_role_name" {
+  description = "MV_WH USAGE のみを持つ機能的ロール名"
+  type        = string
+  default     = "FR_WH_MV_USE"
+}
+
+variable "fr_sandbox_work_write_role_name" {
+  description = "SANDBOX_DB.WORK への読み書き権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_SANDBOX_WORK_WRITE"
+}
+
+variable "fr_sandbox_work_read_role_name" {
+  description = "SANDBOX_DB.WORK への読み取り権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_SANDBOX_WORK_READ"
+}
+
+variable "fr_raw_covid19_write_role_name" {
+  description = "RAW_DB.COVID19 への読み書き権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_RAW_COVID19_WRITE"
+}
+
+variable "fr_raw_covid19_read_role_name" {
+  description = "RAW_DB.COVID19 への読み取り権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_RAW_COVID19_READ"
+}
+
+variable "fr_budget_book_write_role_name" {
+  description = "RAW_DB.BUDGET_BOOK への読み書き権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_BUDGET_BOOK_WRITE"
+}
+
+variable "fr_budget_book_read_role_name" {
+  description = "RAW_DB.BUDGET_BOOK への読み取り権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_BUDGET_BOOK_READ"
+}
+
+variable "fr_cortex_admin_role_name" {
+  description = "Cortex Search Service作成・YAML更新権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_CORTEX_ADMIN"
+}
+
+variable "fr_cortex_use_role_name" {
+  description = "既存Cortexリソース（Agent/Search/SemanticView）の利用権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_CORTEX_USE"
+}
+
+variable "fr_managed_access_test_role_name" {
+  description = "MANAGED_ACCESS_DB のテスト権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_MANAGED_ACCESS_TEST"
 }
 
 # =============================================================================

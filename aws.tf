@@ -158,16 +158,3 @@ resource "snowflake_stage" "external_s3" {
   comment             = "S3外部データ用ステージ（Storage Integration経由）"
 }
 
-# -----------------------------------------------------------------------------
-# GRANT USAGE on Stage → DEVELOPER_ROLE / ANALYST_ROLE
-# -----------------------------------------------------------------------------
-resource "snowflake_grant_privileges_to_account_role" "stage_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.developer_role.name
-  privileges        = ["USAGE"]
-
-  on_schema_object {
-    object_type = "STAGE"
-    object_name = "\"${snowflake_stage.external_s3.database}\".\"${snowflake_stage.external_s3.schema}\".\"${snowflake_stage.external_s3.name}\""
-  }
-}

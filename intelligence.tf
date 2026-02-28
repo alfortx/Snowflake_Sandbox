@@ -178,7 +178,7 @@ resource "snowflake_semantic_view" "covid19" {
 }
 
 # -----------------------------------------------------------------------------
-# Semantic View への SELECT 権限（CORTEX_ROLE）
+# Semantic View への SELECT 権限（FR_CORTEX_ADMIN）
 #   Provider が SEMANTIC VIEW オブジェクト型を未サポートの可能性があるため
 #   snowflake_execute で GRANT SQL を直接実行する
 # -----------------------------------------------------------------------------
@@ -186,36 +186,12 @@ resource "snowflake_execute" "semantic_view_grant" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_semantic_view.covid19]
 
-  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" TO ROLE ${var.cortex_role_name}"
-  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.cortex_role_name}"
+  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_semantic_view.covid19]
   }
-}
-
-# -----------------------------------------------------------------------------
-# AGENTS スキーマへの USAGE 権限（CORTEX_ROLE）
-# -----------------------------------------------------------------------------
-resource "snowflake_grant_privileges_to_account_role" "agents_schema_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.cortex_role.name
-  privileges        = ["USAGE"]
-
-  on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\""
-  }
-}
-
-# -----------------------------------------------------------------------------
-# SNOWFLAKE.CORTEX_AGENT_USER DB ロールを CORTEX_ROLE に付与
-#   Cortex Agent の利用に必要なシステム DB ロール
-# -----------------------------------------------------------------------------
-resource "snowflake_grant_database_role" "cortex_agent_user" {
-  provider = snowflake.accountadmin
-
-  database_role_name = "\"SNOWFLAKE\".\"CORTEX_AGENT_USER\""
-  parent_role_name   = snowflake_account_role.cortex_role.name
 }
 
 # -----------------------------------------------------------------------------
@@ -271,15 +247,15 @@ ${local.agent_spec}      $$
 }
 
 # -----------------------------------------------------------------------------
-# Agent への USAGE 権限（CORTEX_ROLE）
+# Agent への USAGE 権限（FR_CORTEX_ADMIN）
 #   Snowflake Intelligence で sandbox_user がこのエージェントを使用するために必要
 # -----------------------------------------------------------------------------
 resource "snowflake_execute" "agent_usage_grant" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.covid19_agent]
 
-  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" TO ROLE ${var.cortex_role_name}"
-  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" FROM ROLE ${var.cortex_role_name}"
+  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.covid19_agent]
@@ -287,59 +263,30 @@ resource "snowflake_execute" "agent_usage_grant" {
 }
 
 # -----------------------------------------------------------------------------
-# DEVELOPER_ROLE への COVID19 Cortex リソース利用権限
+# COVID19 Cortex リソース利用権限（FR_CORTEX_USE）
+#   FR_CORTEX_USE を継承した DEVELOPER_ROLE / VIEWER_ROLE に適用される
 # -----------------------------------------------------------------------------
 
-# COVID19_SEMANTIC セマンティックビューへの SELECT 権限（DEVELOPER_ROLE）
-resource "snowflake_execute" "covid19_semantic_view_grant_sandbox" {
+# COVID19_SEMANTIC セマンティックビューへの SELECT 権限（FR_CORTEX_USE）
+resource "snowflake_execute" "covid19_semantic_view_grant_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_semantic_view.covid19]
 
-  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" TO ROLE ${var.developer_role_name}"
-  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.developer_role_name}"
+  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_semantic_view.covid19]
   }
 }
 
-# COVID19_AGENT への USAGE 権限（DEVELOPER_ROLE）
-resource "snowflake_execute" "covid19_agent_grant_sandbox" {
+# COVID19_AGENT への USAGE 権限（FR_CORTEX_USE）
+resource "snowflake_execute" "covid19_agent_grant_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.covid19_agent]
 
-  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" TO ROLE ${var.developer_role_name}"
-  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" FROM ROLE ${var.developer_role_name}"
-
-  lifecycle {
-    replace_triggered_by = [snowflake_execute.covid19_agent]
-  }
-}
-
-# -----------------------------------------------------------------------------
-# ANALYST_ROLE への COVID19 Cortex リソース利用権限
-# -----------------------------------------------------------------------------
-
-# COVID19_SEMANTIC セマンティックビューへの SELECT 権限（ANALYST_ROLE）
-resource "snowflake_execute" "covid19_semantic_view_grant_analyst" {
-  provider   = snowflake.sysadmin
-  depends_on = [snowflake_semantic_view.covid19]
-
-  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" TO ROLE ${var.analyst_role_name}"
-  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.analyst_role_name}"
-
-  lifecycle {
-    replace_triggered_by = [snowflake_semantic_view.covid19]
-  }
-}
-
-# COVID19_AGENT への USAGE 権限（ANALYST_ROLE）
-resource "snowflake_execute" "covid19_agent_grant_analyst" {
-  provider   = snowflake.sysadmin
-  depends_on = [snowflake_execute.covid19_agent]
-
-  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" TO ROLE ${var.analyst_role_name}"
-  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" FROM ROLE ${var.analyst_role_name}"
+  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.covid19_agent]

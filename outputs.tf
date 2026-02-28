@@ -22,9 +22,9 @@ output "developer_role_name" {
   value       = snowflake_account_role.developer_role.name
 }
 
-output "analyst_role_name" {
-  description = "分析者用ロール名"
-  value       = snowflake_account_role.analyst_role.name
+output "viewer_role_name" {
+  description = "閲覧者用ロール名"
+  value       = snowflake_account_role.viewer_role.name
 }
 
 output "user_name" {

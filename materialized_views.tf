@@ -15,32 +15,6 @@ resource "snowflake_warehouse" "mv_wh" {
   initially_suspended = true
 }
 
-# DEVELOPER_ROLE への MV_WH 使用権限
-resource "snowflake_grant_privileges_to_account_role" "mv_wh_usage" {
-  provider = snowflake.securityadmin
-
-  account_role_name = snowflake_account_role.developer_role.name
-  privileges        = ["USAGE", "OPERATE"]
-
-  on_account_object {
-    object_type = "WAREHOUSE"
-    object_name = snowflake_warehouse.mv_wh.name
-  }
-}
-
-# ANALYST_ROLE への MV_WH 使用権限
-resource "snowflake_grant_privileges_to_account_role" "analyst_mv_wh_usage" {
-  provider = snowflake.securityadmin
-
-  account_role_name = snowflake_account_role.analyst_role.name
-  privileges        = ["USAGE"]
-
-  on_account_object {
-    object_type = "WAREHOUSE"
-    object_name = snowflake_warehouse.mv_wh.name
-  }
-}
-
 # =============================================================================
 # マテリアライズドビューの作成
 # 外部テーブルの S3 スキャンをキャッシュし、クエリを高速化する
@@ -146,58 +120,3 @@ resource "snowflake_materialized_view" "mv_covid19_world_testing" {
   ]
 }
 
-# =============================================================================
-# DEVELOPER_ROLE / ANALYST_ROLE へのマテリアライズドビュー SELECT 権限付与
-# =============================================================================
-
-# MV_JHU_TIMESERIES への SELECT 権限（DEVELOPER_ROLE）
-resource "snowflake_grant_privileges_to_account_role" "mv_jhu_select" {
-  provider = snowflake.securityadmin
-
-  account_role_name = snowflake_account_role.developer_role.name
-  privileges        = ["SELECT"]
-
-  on_schema_object {
-    object_type = "MATERIALIZED VIEW"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_jhu_timeseries.name}\""
-  }
-}
-
-# MV_COVID19_WORLD_TESTING への SELECT 権限（DEVELOPER_ROLE）
-resource "snowflake_grant_privileges_to_account_role" "mv_world_testing_select" {
-  provider = snowflake.securityadmin
-
-  account_role_name = snowflake_account_role.developer_role.name
-  privileges        = ["SELECT"]
-
-  on_schema_object {
-    object_type = "MATERIALIZED VIEW"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_covid19_world_testing.name}\""
-  }
-}
-
-# MV_JHU_TIMESERIES への SELECT 権限（ANALYST_ROLE）
-resource "snowflake_grant_privileges_to_account_role" "analyst_mv_jhu_select" {
-  provider = snowflake.securityadmin
-
-  account_role_name = snowflake_account_role.analyst_role.name
-  privileges        = ["SELECT"]
-
-  on_schema_object {
-    object_type = "MATERIALIZED VIEW"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_jhu_timeseries.name}\""
-  }
-}
-
-# MV_COVID19_WORLD_TESTING への SELECT 権限（ANALYST_ROLE）
-resource "snowflake_grant_privileges_to_account_role" "analyst_mv_world_testing_select" {
-  provider = snowflake.securityadmin
-
-  account_role_name = snowflake_account_role.analyst_role.name
-  privileges        = ["SELECT"]
-
-  on_schema_object {
-    object_type = "MATERIALIZED VIEW"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_covid19_world_testing.name}\""
-  }
-}

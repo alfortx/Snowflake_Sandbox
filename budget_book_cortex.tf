@@ -111,42 +111,16 @@ resource "snowflake_semantic_view" "budget_book" {
   depends_on = [snowflake_table.budget_book_transactions]
 }
 
-# セマンティックビューへの SELECT 権限（CORTEX_ROLE）
+# セマンティックビューへの SELECT 権限（FR_CORTEX_ADMIN）
 resource "snowflake_execute" "budget_book_semantic_view_grant_cortex" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_semantic_view.budget_book]
 
-  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" TO ROLE ${var.cortex_role_name}"
-  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" FROM ROLE ${var.cortex_role_name}"
+  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_semantic_view.budget_book]
-  }
-}
-
-# =============================================================================
-# CORTEX_ROLEへの RAW_DB.BUDGET_BOOK アクセス権限
-#   セマンティックビューとCortex SearchがTRANSACTIONSテーブルを参照するために必要
-# =============================================================================
-
-resource "snowflake_grant_privileges_to_account_role" "cortex_budget_book_schema_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.cortex_role.name
-  privileges        = ["USAGE"]
-
-  on_schema {
-    schema_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\""
-  }
-}
-
-resource "snowflake_grant_privileges_to_account_role" "cortex_budget_book_transactions_select" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.cortex_role.name
-  privileges        = ["SELECT"]
-
-  on_schema_object {
-    object_type = "TABLE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\".\"${snowflake_table.budget_book_transactions.name}\""
   }
 }
 
@@ -158,8 +132,8 @@ resource "snowflake_execute" "budget_book_search_service" {
   provider = snowflake.sysadmin
   depends_on = [
     snowflake_table.budget_book_transactions,
-    snowflake_grant_privileges_to_account_role.cortex_budget_book_schema_usage,
-    snowflake_grant_privileges_to_account_role.cortex_budget_book_transactions_select,
+    snowflake_grant_privileges_to_account_role.fr_budget_book_read_schema,
+    snowflake_grant_privileges_to_account_role.fr_budget_book_read_transactions,
   ]
 
   execute = <<-SQL
@@ -183,13 +157,13 @@ resource "snowflake_execute" "budget_book_search_service" {
   revert = "DROP CORTEX SEARCH SERVICE IF EXISTS \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\""
 }
 
-# Cortex Search サービスへの USAGE 権限（CORTEX_ROLE）
+# Cortex Search サービスへの USAGE 権限（FR_CORTEX_ADMIN）
 resource "snowflake_execute" "budget_book_search_service_grant_cortex" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.budget_book_search_service]
 
-  execute = "GRANT USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.cortex_role_name}"
-  revert  = "REVOKE USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.cortex_role_name}"
+  execute = "GRANT USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.budget_book_search_service]
@@ -274,235 +248,58 @@ resource "snowflake_execute" "budget_book_agent_grant_cortex" {
 }
 
 # =============================================================================
-# DEVELOPER_ROLE への CORTEX_DB 権限付与
+# FR_CORTEX_USE への BUDGET_BOOK Cortex リソース利用権限
+#   FR_CORTEX_USE を継承した DEVELOPER_ROLE / VIEWER_ROLE に適用される
 # =============================================================================
 
-# CORTEX_DB への USAGE 権限
-resource "snowflake_grant_privileges_to_account_role" "sandbox_cortex_db_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.developer_role.name
-  privileges        = ["USAGE"]
-
-  on_account_object {
-    object_type = "DATABASE"
-    object_name = snowflake_database.cortex.name
-  }
-}
-
-# CORTEX_DB.SEMANTIC_MODELS スキーマへの USAGE 権限
-resource "snowflake_grant_privileges_to_account_role" "sandbox_semantic_models_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.developer_role.name
-  privileges        = ["USAGE"]
-
-  on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\""
-  }
-}
-
-# CORTEX_DB.SEARCH_SERVICES スキーマへの USAGE 権限
-resource "snowflake_grant_privileges_to_account_role" "sandbox_search_services_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.developer_role.name
-  privileges        = ["USAGE"]
-
-  on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\""
-  }
-}
-
-# CORTEX_DB.AGENTS スキーマへの USAGE 権限
-resource "snowflake_grant_privileges_to_account_role" "sandbox_agents_schema_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.developer_role.name
-  privileges        = ["USAGE"]
-
-  on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\""
-  }
-}
-
-# BUDGET_BOOK_SEMANTIC セマンティックビューへの SELECT 権限（DEVELOPER_ROLE）
-resource "snowflake_execute" "budget_book_semantic_view_grant_sandbox" {
+# BUDGET_BOOK_SEMANTIC セマンティックビューへの SELECT 権限（FR_CORTEX_USE）
+resource "snowflake_execute" "budget_book_semantic_view_grant_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_semantic_view.budget_book]
 
-  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" TO ROLE ${var.developer_role_name}"
-  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" FROM ROLE ${var.developer_role_name}"
+  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_semantic_view.budget_book]
   }
 }
 
-# BUDGET_BOOK_SEARCH への USAGE 権限（DEVELOPER_ROLE）
-resource "snowflake_execute" "budget_book_search_service_grant_sandbox" {
+# BUDGET_BOOK_SEARCH への USAGE 権限（FR_CORTEX_USE）
+resource "snowflake_execute" "budget_book_search_service_grant_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.budget_book_search_service]
 
-  execute = "GRANT USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.developer_role_name}"
-  revert  = "REVOKE USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.developer_role_name}"
+  execute = "GRANT USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.budget_book_search_service]
   }
 }
 
-# BUDGET_BOOK_SEARCH への MONITOR 権限（DEVELOPER_ROLE）
-resource "snowflake_execute" "budget_book_search_monitor_sandbox" {
+# BUDGET_BOOK_SEARCH への MONITOR 権限（FR_CORTEX_USE）
+resource "snowflake_execute" "budget_book_search_monitor_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.budget_book_search_service]
 
-  execute = "GRANT MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.developer_role_name}"
-  revert  = "REVOKE MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.developer_role_name}"
+  execute = "GRANT MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.budget_book_search_service]
   }
 }
 
-# BUDGET_BOOK_AGENT への USAGE 権限（DEVELOPER_ROLE）
-resource "snowflake_execute" "budget_book_agent_grant_sandbox" {
+# BUDGET_BOOK_AGENT への USAGE 権限（FR_CORTEX_USE）
+resource "snowflake_execute" "budget_book_agent_grant_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.budget_book_agent]
 
-  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" TO ROLE ${var.developer_role_name}"
-  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" FROM ROLE ${var.developer_role_name}"
+  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.budget_book_agent]
   }
-}
-
-# SNOWFLAKE.CORTEX_USER DB ロールを DEVELOPER_ROLE に付与（Cortex ML関数の使用）
-resource "snowflake_grant_database_role" "sandbox_cortex_user" {
-  provider = snowflake.accountadmin
-
-  database_role_name = "\"SNOWFLAKE\".\"CORTEX_USER\""
-  parent_role_name   = snowflake_account_role.developer_role.name
-}
-
-# SNOWFLAKE.CORTEX_AGENT_USER DB ロールを DEVELOPER_ROLE に付与（Agent呼び出し）
-resource "snowflake_grant_database_role" "sandbox_cortex_agent_user" {
-  provider = snowflake.accountadmin
-
-  database_role_name = "\"SNOWFLAKE\".\"CORTEX_AGENT_USER\""
-  parent_role_name   = snowflake_account_role.developer_role.name
-}
-
-# =============================================================================
-# ANALYST_ROLE への CORTEX_DB 権限付与
-# =============================================================================
-
-# CORTEX_DB への USAGE 権限
-resource "snowflake_grant_privileges_to_account_role" "analyst_cortex_db_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.analyst_role.name
-  privileges        = ["USAGE"]
-
-  on_account_object {
-    object_type = "DATABASE"
-    object_name = snowflake_database.cortex.name
-  }
-}
-
-# CORTEX_DB.SEMANTIC_MODELS スキーマへの USAGE 権限
-resource "snowflake_grant_privileges_to_account_role" "analyst_semantic_models_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.analyst_role.name
-  privileges        = ["USAGE"]
-
-  on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\""
-  }
-}
-
-# CORTEX_DB.SEARCH_SERVICES スキーマへの USAGE 権限
-resource "snowflake_grant_privileges_to_account_role" "analyst_search_services_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.analyst_role.name
-  privileges        = ["USAGE"]
-
-  on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\""
-  }
-}
-
-# CORTEX_DB.AGENTS スキーマへの USAGE 権限
-resource "snowflake_grant_privileges_to_account_role" "analyst_agents_schema_usage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.analyst_role.name
-  privileges        = ["USAGE"]
-
-  on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\""
-  }
-}
-
-# BUDGET_BOOK_SEMANTIC セマンティックビューへの SELECT 権限（ANALYST_ROLE）
-resource "snowflake_execute" "budget_book_semantic_view_grant_analyst" {
-  provider   = snowflake.sysadmin
-  depends_on = [snowflake_semantic_view.budget_book]
-
-  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" TO ROLE ${var.analyst_role_name}"
-  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" FROM ROLE ${var.analyst_role_name}"
-
-  lifecycle {
-    replace_triggered_by = [snowflake_semantic_view.budget_book]
-  }
-}
-
-# BUDGET_BOOK_SEARCH への USAGE 権限（ANALYST_ROLE）
-resource "snowflake_execute" "budget_book_search_service_grant_analyst" {
-  provider   = snowflake.sysadmin
-  depends_on = [snowflake_execute.budget_book_search_service]
-
-  execute = "GRANT USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.analyst_role_name}"
-  revert  = "REVOKE USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.analyst_role_name}"
-
-  lifecycle {
-    replace_triggered_by = [snowflake_execute.budget_book_search_service]
-  }
-}
-
-# BUDGET_BOOK_SEARCH への MONITOR 権限（ANALYST_ROLE）
-resource "snowflake_execute" "budget_book_search_monitor_analyst" {
-  provider   = snowflake.sysadmin
-  depends_on = [snowflake_execute.budget_book_search_service]
-
-  execute = "GRANT MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.analyst_role_name}"
-  revert  = "REVOKE MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.analyst_role_name}"
-
-  lifecycle {
-    replace_triggered_by = [snowflake_execute.budget_book_search_service]
-  }
-}
-
-# BUDGET_BOOK_AGENT への USAGE 権限（ANALYST_ROLE）
-resource "snowflake_execute" "budget_book_agent_grant_analyst" {
-  provider   = snowflake.sysadmin
-  depends_on = [snowflake_execute.budget_book_agent]
-
-  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" TO ROLE ${var.analyst_role_name}"
-  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" FROM ROLE ${var.analyst_role_name}"
-
-  lifecycle {
-    replace_triggered_by = [snowflake_execute.budget_book_agent]
-  }
-}
-
-# SNOWFLAKE.CORTEX_USER DB ロールを ANALYST_ROLE に付与（Cortex ML関数の使用）
-resource "snowflake_grant_database_role" "analyst_cortex_user" {
-  provider = snowflake.accountadmin
-
-  database_role_name = "\"SNOWFLAKE\".\"CORTEX_USER\""
-  parent_role_name   = snowflake_account_role.analyst_role.name
-}
-
-# SNOWFLAKE.CORTEX_AGENT_USER DB ロールを ANALYST_ROLE に付与（Agent呼び出し）
-resource "snowflake_grant_database_role" "analyst_cortex_agent_user" {
-  provider = snowflake.accountadmin
-
-  database_role_name = "\"SNOWFLAKE\".\"CORTEX_AGENT_USER\""
-  parent_role_name   = snowflake_account_role.analyst_role.name
 }
