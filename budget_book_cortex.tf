@@ -234,13 +234,13 @@ ${local.budget_book_agent_spec}      $$
   revert = "DROP AGENT IF EXISTS \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\""
 }
 
-# Agent への USAGE 権限（CORTEX_ROLE）
+# Agent への USAGE 権限（FR_CORTEX_ADMIN）
 resource "snowflake_execute" "budget_book_agent_grant_cortex" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.budget_book_agent]
 
-  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" TO ROLE ${var.cortex_role_name}"
-  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" FROM ROLE ${var.cortex_role_name}"
+  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.budget_book_agent]
