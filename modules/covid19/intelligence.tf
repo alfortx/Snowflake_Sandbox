@@ -1,46 +1,17 @@
 # =============================================================================
-# Snowflake Intelligence / Cortex Agent
+# COVID-19 Semantic View + Cortex Agent
 #
-# 構成概要:
-#   CORTEX_DB
-#   ├── SEMANTIC_MODELS スキーマ
-#   │   └── COVID19_SEMANTIC セマンティックビュー  ← Cortex Agent がデータ参照に使用
-#   └── AGENTS スキーマ
-#       └── COVID19_AGENT                         ← Snowflake Intelligence から呼び出せるエージェント
-#
-# 参照データ:
-#   RAW_DB.COVID19.MV_JHU_TIMESERIES         (JHU 時系列)
-#   RAW_DB.COVID19.MV_COVID19_WORLD_TESTING  (OWID ワクチン・検査)
-#
-# ⚠️ Semantic View は Preview リソース。
-#    tables / dimensions / facts / metrics / relationships の変更は
-#    destroy → recreate が発生します（データは消えません）。
+# 注意: AGENTS スキーマは cortex モジュールで作成済み（var.agents_schema_name で受け取る）
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# AGENTS スキーマ: Cortex Agent の配置先
-# -----------------------------------------------------------------------------
-resource "snowflake_schema" "agents" {
-  provider = snowflake.sysadmin
-
-  database = snowflake_database.cortex.name
-  name     = var.cortex_agents_schema_name
-  comment  = "Cortex Agent 配置スキーマ（Snowflake Intelligence 連携）"
-}
-
-# -----------------------------------------------------------------------------
-# Semantic View: MV_JHU_TIMESERIES × MV_COVID19_WORLD_TESTING を統合
-#   Cortex Agent の cortex_analyst_text_to_sql ツールがこのビューを使用する
-# -----------------------------------------------------------------------------
 resource "snowflake_semantic_view" "covid19" {
   provider = snowflake.sysadmin
 
-  database = snowflake_database.cortex.name
-  schema   = snowflake_schema.semantic_models.name
+  database = var.cortex_db_name
+  schema   = var.semantic_models_schema_name
   name     = var.semantic_view_name
   comment  = "COVID-19分析用セマンティックビュー"
 
-  # --- 論理テーブル定義 ---
   tables {
     table_alias = "JHU_TIMESERIES"
     table_name  = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_jhu_timeseries.name}\""
@@ -52,7 +23,6 @@ resource "snowflake_semantic_view" "covid19" {
     primary_key = ["ISO_CODE", "DATE"]
   }
 
-  # --- テーブル間リレーション: JHU_TIMESERIES LEFT OUTER JOIN WORLD_TESTING on iso3=iso_code, date=date ---
   relationships {
     relationship_identifier = "JHU_TO_WORLD"
     table_name_or_alias {
@@ -65,7 +35,6 @@ resource "snowflake_semantic_view" "covid19" {
     referenced_relationship_columns = ["ISO_CODE", "DATE"]
   }
 
-  # --- ディメンション（絞り込み・グルーピング軸）---
   dimensions {
     qualified_expression_name = "\"JHU_TIMESERIES\".\"COUNTRY_REGION\""
     sql_expression            = "\"JHU_TIMESERIES\".\"COUNTRY_REGION\""
@@ -96,7 +65,6 @@ resource "snowflake_semantic_view" "covid19" {
     synonym                   = toset(["continent", "大陸", "地域区分"])
   }
 
-  # --- ファクト（生の数値列）---
   facts {
     qualified_expression_name = "\"JHU_TIMESERIES\".\"CONFIRMED\""
     sql_expression            = "\"JHU_TIMESERIES\".\"CONFIRMED\""
@@ -158,7 +126,6 @@ resource "snowflake_semantic_view" "covid19" {
     synonym                   = toset(["ワクチン接種総数", "累計ワクチン接種数"])
   }
 
-  # --- メトリクス（集計計算式）---
   metrics {
     semantic_expression {
       qualified_expression_name = "\"JHU_TIMESERIES\".\"CASE_FATALITY_RATE\""
@@ -177,30 +144,19 @@ resource "snowflake_semantic_view" "covid19" {
   }
 }
 
-# -----------------------------------------------------------------------------
-# Semantic View への SELECT 権限（FR_CORTEX_ADMIN）
-#   Provider が SEMANTIC VIEW オブジェクト型を未サポートの可能性があるため
-#   snowflake_execute で GRANT SQL を直接実行する
-# -----------------------------------------------------------------------------
 resource "snowflake_execute" "semantic_view_grant" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_semantic_view.covid19]
 
-  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
-  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
+  execute = "GRANT SELECT ON SEMANTIC VIEW \"${var.cortex_db_name}\".\"${var.semantic_models_schema_name}\".\"${var.semantic_view_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${var.cortex_db_name}\".\"${var.semantic_models_schema_name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_semantic_view.covid19]
   }
 }
 
-# -----------------------------------------------------------------------------
-# Cortex Agent の作成（snowflake_execute 経由）
-#   ネイティブの Terraform リソースが未実装のため、CREATE AGENT SQL を直接実行する
-#   エージェント設定変更時は terraform apply で OR REPLACE により自動再作成される
-# -----------------------------------------------------------------------------
 locals {
-  # Agent YAML 仕様
   agent_spec = <<-YAML
     models:
       orchestration: claude-4-sonnet
@@ -225,10 +181,10 @@ locals {
           description: "COVID-19の感染者数・死者数・ワクチン接種データを自然言語で分析するツール。国別・大陸別・時系列での比較が可能。"
     tool_resources:
       covid19_analyst:
-        semantic_view: "${snowflake_database.cortex.name}.${snowflake_schema.semantic_models.name}.${var.semantic_view_name}"
+        semantic_view: "${var.cortex_db_name}.${var.semantic_models_schema_name}.${var.semantic_view_name}"
         execution_environment:
           type: warehouse
-          warehouse: "${snowflake_warehouse.sandbox.name}"
+          warehouse: "${var.sandbox_wh_name}"
   YAML
 }
 
@@ -237,56 +193,45 @@ resource "snowflake_execute" "covid19_agent" {
   depends_on = [snowflake_semantic_view.covid19, snowflake_execute.semantic_view_grant]
 
   execute = <<-SQL
-    CREATE OR REPLACE AGENT "${snowflake_database.cortex.name}"."${snowflake_schema.agents.name}"."${var.agent_name}"
+    CREATE OR REPLACE AGENT "${var.cortex_db_name}"."${var.agents_schema_name}"."${var.agent_name}"
       COMMENT = 'COVID-19パンデミックデータを自然言語で分析するCortexエージェント（Snowflake Intelligence連携）'
       FROM SPECIFICATION $$
 ${local.agent_spec}      $$
   SQL
 
-  revert = "DROP AGENT IF EXISTS \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\""
+  revert = "DROP AGENT IF EXISTS \"${var.cortex_db_name}\".\"${var.agents_schema_name}\".\"${var.agent_name}\""
 }
 
-# -----------------------------------------------------------------------------
-# Agent への USAGE 権限（FR_CORTEX_ADMIN）
-#   Snowflake Intelligence で sandbox_user がこのエージェントを使用するために必要
-# -----------------------------------------------------------------------------
 resource "snowflake_execute" "agent_usage_grant" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.covid19_agent]
 
-  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
-  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
+  execute = "GRANT USAGE ON AGENT \"${var.cortex_db_name}\".\"${var.agents_schema_name}\".\"${var.agent_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE USAGE ON AGENT \"${var.cortex_db_name}\".\"${var.agents_schema_name}\".\"${var.agent_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.covid19_agent]
   }
 }
 
-# -----------------------------------------------------------------------------
-# COVID19 Cortex リソース利用権限（FR_CORTEX_USE）
-#   FR_CORTEX_USE を継承した DEVELOPER_ROLE / VIEWER_ROLE に適用される
-# -----------------------------------------------------------------------------
-
-# COVID19_SEMANTIC セマンティックビューへの SELECT 権限（FR_CORTEX_USE）
 resource "snowflake_execute" "covid19_semantic_view_grant_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_semantic_view.covid19]
 
-  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
-  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
+  execute = "GRANT SELECT ON SEMANTIC VIEW \"${var.cortex_db_name}\".\"${var.semantic_models_schema_name}\".\"${var.semantic_view_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${var.cortex_db_name}\".\"${var.semantic_models_schema_name}\".\"${var.semantic_view_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_semantic_view.covid19]
   }
 }
 
-# COVID19_AGENT への USAGE 権限（FR_CORTEX_USE）
 resource "snowflake_execute" "covid19_agent_grant_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.covid19_agent]
 
-  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
-  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.agent_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
+  execute = "GRANT USAGE ON AGENT \"${var.cortex_db_name}\".\"${var.agents_schema_name}\".\"${var.agent_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE USAGE ON AGENT \"${var.cortex_db_name}\".\"${var.agents_schema_name}\".\"${var.agent_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.covid19_agent]

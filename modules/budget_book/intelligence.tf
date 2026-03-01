@@ -1,35 +1,21 @@
 # =============================================================================
-# 家計簿データ (MoneyForward) - Cortex リソース
-#
-# 構成:
-#   CORTEX_DB.SEMANTIC_MODELS.BUDGET_BOOK_SEMANTIC  (Cortex Analyst用)
-#   CORTEX_DB.SEARCH_SERVICES.BUDGET_BOOK_SEARCH    (Cortex Search)
-#   CORTEX_DB.AGENTS.BUDGET_BOOK_AGENT              (2ツール構成 Agent)
-#
-# 依存関係:
-#   moneyforward.tf の TRANSACTIONS テーブルが先に作成されている必要がある
+# 家計簿 Cortex リソース: Semantic View + Search Service + Agent
 # =============================================================================
 
-# =============================================================================
-# Semantic View: BUDGET_BOOK_SEMANTIC
-#   Cortex Analyst の cortex_analyst_text_to_sql ツールが使用するビュー
-#   TRANSACTIONS テーブルの列名（英語）に日本語 synonym を付与
-# =============================================================================
 resource "snowflake_semantic_view" "budget_book" {
   provider = snowflake.sysadmin
 
-  database = snowflake_database.cortex.name
-  schema   = snowflake_schema.semantic_models.name
+  database = var.cortex_db_name
+  schema   = var.semantic_models_schema_name
   name     = var.budget_book_semantic_view_name
   comment  = "家計簿分析用セマンティックビュー（Cortex Analyst連携）"
 
   tables {
     table_alias = "MF"
-    table_name  = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\".\"${snowflake_table.budget_book_transactions.name}\""
+    table_name  = "\"${var.raw_db_name}\".\"${snowflake_schema.budget_book.name}\".\"${snowflake_table.budget_book_transactions.name}\""
     primary_key = ["ID"]
   }
 
-  # --- ディメンション（絞り込み・グルーピング軸）---
   dimensions {
     qualified_expression_name = "\"MF\".\"TRANSACTION_DATE\""
     sql_expression            = "\"MF\".\"TRANSACTION_DATE\""
@@ -73,7 +59,6 @@ resource "snowflake_semantic_view" "budget_book" {
     synonym                   = toset(["振替", "振替フラグ", "資産移動"])
   }
 
-  # --- ファクト（生の数値列）---
   facts {
     qualified_expression_name = "\"MF\".\"AMOUNT\""
     sql_expression            = "\"MF\".\"AMOUNT\""
@@ -81,8 +66,6 @@ resource "snowflake_semantic_view" "budget_book" {
     synonym                   = toset(["金額", "支出", "収入", "amount", "円", "お金"])
   }
 
-  # --- メトリクス（集計計算式）---
-  # 振替取引(TRANSFER_FLAG=1)と計算対象外(CALCULATION_TARGET=0)を自動除外
   metrics {
     semantic_expression {
       qualified_expression_name = "\"MF\".\"MONTHLY_SPENDING\""
@@ -111,36 +94,29 @@ resource "snowflake_semantic_view" "budget_book" {
   depends_on = [snowflake_table.budget_book_transactions]
 }
 
-# セマンティックビューへの SELECT 権限（FR_CORTEX_ADMIN）
 resource "snowflake_execute" "budget_book_semantic_view_grant_cortex" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_semantic_view.budget_book]
 
-  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
-  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
+  execute = "GRANT SELECT ON SEMANTIC VIEW \"${var.cortex_db_name}\".\"${var.semantic_models_schema_name}\".\"${var.budget_book_semantic_view_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${var.cortex_db_name}\".\"${var.semantic_models_schema_name}\".\"${var.budget_book_semantic_view_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_semantic_view.budget_book]
   }
 }
 
-# =============================================================================
-# Cortex Search サービス: BUDGET_BOOK_SEARCH
-#   内容・カテゴリ名の全文検索、金融機関・日付・大項目でフィルター可能
-# =============================================================================
 resource "snowflake_execute" "budget_book_search_service" {
   provider = snowflake.sysadmin
   depends_on = [
     snowflake_table.budget_book_transactions,
-    snowflake_grant_privileges_to_account_role.fr_budget_book_read_schema,
-    snowflake_grant_privileges_to_account_role.fr_budget_book_read_transactions,
   ]
 
   execute = <<-SQL
-    CREATE OR REPLACE CORTEX SEARCH SERVICE "${snowflake_database.cortex.name}"."${snowflake_schema.search_services.name}"."${var.budget_book_search_service_name}"
+    CREATE OR REPLACE CORTEX SEARCH SERVICE "${var.cortex_db_name}"."${var.search_services_schema_name}"."${var.budget_book_search_service_name}"
       ON SEARCH_TEXT
       ATTRIBUTES MINOR_CATEGORY, MAJOR_CATEGORY
-      WAREHOUSE = ${snowflake_warehouse.sandbox.name}
+      WAREHOUSE = ${var.sandbox_wh_name}
       TARGET_LAG = '1 hour'
       EMBEDDING_MODEL = 'snowflake-arctic-embed-l-v2.0'
       COMMENT = '家計簿取引の内容・カテゴリ検索（CONCAT_WS + arctic-embed-l-v2.0）'
@@ -148,45 +124,39 @@ resource "snowflake_execute" "budget_book_search_service" {
       SELECT
         *,
         CONCAT_WS(' ', DESCRIPTION, MAJOR_CATEGORY, MINOR_CATEGORY) AS SEARCH_TEXT
-      FROM "${snowflake_database.raw_db.name}"."${snowflake_schema.budget_book.name}"."${snowflake_table.budget_book_transactions.name}"
+      FROM "${var.raw_db_name}"."${snowflake_schema.budget_book.name}"."${snowflake_table.budget_book_transactions.name}"
       WHERE CALCULATION_TARGET = 1
         AND TRANSFER_FLAG = 0
     )
   SQL
 
-  revert = "DROP CORTEX SEARCH SERVICE IF EXISTS \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\""
+  revert = "DROP CORTEX SEARCH SERVICE IF EXISTS \"${var.cortex_db_name}\".\"${var.search_services_schema_name}\".\"${var.budget_book_search_service_name}\""
 }
 
-# Cortex Search サービスへの USAGE 権限（FR_CORTEX_ADMIN）
 resource "snowflake_execute" "budget_book_search_service_grant_cortex" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.budget_book_search_service]
 
-  execute = "GRANT USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
-  revert  = "REVOKE USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
+  execute = "GRANT USAGE ON CORTEX SEARCH SERVICE \"${var.cortex_db_name}\".\"${var.search_services_schema_name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE USAGE ON CORTEX SEARCH SERVICE \"${var.cortex_db_name}\".\"${var.search_services_schema_name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.budget_book_search_service]
   }
 }
 
-# Cortex Search サービスへの MONITOR 権限（FR_CORTEX_ADMIN）
 resource "snowflake_execute" "budget_book_search_service_monitor_cortex" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.budget_book_search_service]
 
-  execute = "GRANT MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
-  revert  = "REVOKE MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
+  execute = "GRANT MONITOR ON CORTEX SEARCH SERVICE \"${var.cortex_db_name}\".\"${var.search_services_schema_name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE MONITOR ON CORTEX SEARCH SERVICE \"${var.cortex_db_name}\".\"${var.search_services_schema_name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.budget_book_search_service]
   }
 }
 
-# =============================================================================
-# Cortex Agent: BUDGET_BOOK_AGENT
-#   cortex_analyst_text_to_sql + cortex_search の2ツール構成
-# =============================================================================
 locals {
   budget_book_agent_spec = <<-YAML
     models:
@@ -218,12 +188,12 @@ locals {
           description: "家計簿の取引内容・カテゴリ名をキーワード検索するツール。特定の店舗名や費目の推論、金融機関・日付でのフィルターが可能。"
     tool_resources:
       budget_book_analyst:
-        semantic_view: "${snowflake_database.cortex.name}.${snowflake_schema.semantic_models.name}.${var.budget_book_semantic_view_name}"
+        semantic_view: "${var.cortex_db_name}.${var.semantic_models_schema_name}.${var.budget_book_semantic_view_name}"
         execution_environment:
           type: warehouse
-          warehouse: "${snowflake_warehouse.sandbox.name}"
+          warehouse: "${var.sandbox_wh_name}"
       budget_book_search:
-        search_service: "${snowflake_database.cortex.name}.${snowflake_schema.search_services.name}.${var.budget_book_search_service_name}"
+        search_service: "${var.cortex_db_name}.${var.search_services_schema_name}.${var.budget_book_search_service_name}"
         max_results: 10
   YAML
 }
@@ -238,67 +208,57 @@ resource "snowflake_execute" "budget_book_agent" {
   ]
 
   execute = <<-SQL
-    CREATE OR REPLACE AGENT "${snowflake_database.cortex.name}"."${snowflake_schema.agents.name}"."${var.budget_book_agent_name}"
+    CREATE OR REPLACE AGENT "${var.cortex_db_name}"."${var.agents_schema_name}"."${var.budget_book_agent_name}"
       COMMENT = '家計簿データを自然言語で分析するCortexエージェント（Analyst + Search）'
       FROM SPECIFICATION $$
 ${local.budget_book_agent_spec}      $$
   SQL
 
-  revert = "DROP AGENT IF EXISTS \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\""
+  revert = "DROP AGENT IF EXISTS \"${var.cortex_db_name}\".\"${var.agents_schema_name}\".\"${var.budget_book_agent_name}\""
 }
 
-# Agent への USAGE 権限（FR_CORTEX_ADMIN）
 resource "snowflake_execute" "budget_book_agent_grant_cortex" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.budget_book_agent]
 
-  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
-  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
+  execute = "GRANT USAGE ON AGENT \"${var.cortex_db_name}\".\"${var.agents_schema_name}\".\"${var.budget_book_agent_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE USAGE ON AGENT \"${var.cortex_db_name}\".\"${var.agents_schema_name}\".\"${var.budget_book_agent_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.budget_book_agent]
   }
 }
 
-# =============================================================================
-# FR_CORTEX_USE への BUDGET_BOOK Cortex リソース利用権限
-#   FR_CORTEX_USE を継承した DEVELOPER_ROLE / VIEWER_ROLE に適用される
-# =============================================================================
-
-# BUDGET_BOOK_SEMANTIC セマンティックビューへの SELECT 権限（FR_CORTEX_USE）
 resource "snowflake_execute" "budget_book_semantic_view_grant_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_semantic_view.budget_book]
 
-  execute = "GRANT SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
-  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\".\"${var.budget_book_semantic_view_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
+  execute = "GRANT SELECT ON SEMANTIC VIEW \"${var.cortex_db_name}\".\"${var.semantic_models_schema_name}\".\"${var.budget_book_semantic_view_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE SELECT ON SEMANTIC VIEW \"${var.cortex_db_name}\".\"${var.semantic_models_schema_name}\".\"${var.budget_book_semantic_view_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_semantic_view.budget_book]
   }
 }
 
-# BUDGET_BOOK_SEARCH への USAGE 権限（FR_CORTEX_USE）
 resource "snowflake_execute" "budget_book_search_service_grant_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.budget_book_search_service]
 
-  execute = "GRANT USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
-  revert  = "REVOKE USAGE ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
+  execute = "GRANT USAGE ON CORTEX SEARCH SERVICE \"${var.cortex_db_name}\".\"${var.search_services_schema_name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE USAGE ON CORTEX SEARCH SERVICE \"${var.cortex_db_name}\".\"${var.search_services_schema_name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.budget_book_search_service]
   }
 }
 
-
-# BUDGET_BOOK_AGENT への USAGE 権限（FR_CORTEX_USE）
 resource "snowflake_execute" "budget_book_agent_grant_use" {
   provider   = snowflake.sysadmin
   depends_on = [snowflake_execute.budget_book_agent]
 
-  execute = "GRANT USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
-  revert  = "REVOKE USAGE ON AGENT \"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\".\"${var.budget_book_agent_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
+  execute = "GRANT USAGE ON AGENT \"${var.cortex_db_name}\".\"${var.agents_schema_name}\".\"${var.budget_book_agent_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
+  revert  = "REVOKE USAGE ON AGENT \"${var.cortex_db_name}\".\"${var.agents_schema_name}\".\"${var.budget_book_agent_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
 
   lifecycle {
     replace_triggered_by = [snowflake_execute.budget_book_agent]
