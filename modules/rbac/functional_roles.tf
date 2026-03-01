@@ -1,12 +1,5 @@
 # =============================================================================
-# 機能的ロール（FR_*）定義
-#
-# 設計方針（Snowflake RBAC ベストプラクティス）:
-#   機能的ロール（FR_*）  … オブジェクト権限を保持（ユーザーには直接付与しない）
-#   役割ロール（DEVELOPER/VIEWER/CORTEX）… FR_* を束ねてユーザーに付与
-#   全カスタムロール → SYSADMIN に継承（透過的な権限管理）
-#
-# 権限マトリクスは docs/rbac_matrix.md を参照
+# 機能的ロール（FR_*）定義 + SYSADMIN継承 + 権限マトリクス①
 # =============================================================================
 
 # =============================================================================
@@ -92,105 +85,102 @@ resource "snowflake_account_role" "fr_managed_access_test" {
 }
 
 # =============================================================================
-# ② 全カスタムロール → SYSADMIN への継承（17個）
-#    SYSADMIN が全権限を透過的に把握・管理できるようにする
+# ② 全カスタムロール → SYSADMIN への継承
 # =============================================================================
 
-# --- FR_ ロール 13個 ---
 resource "snowflake_grant_account_role" "fr_wh_sandbox_operate_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_wh_sandbox_operate.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_wh_sandbox_operate.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_wh_sandbox_use_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_wh_sandbox_use.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_wh_sandbox_use.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_wh_mv_operate_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_wh_mv_operate.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_wh_mv_operate.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_wh_mv_use_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_wh_mv_use.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_wh_mv_use.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_sandbox_work_write_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_sandbox_work_write.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_sandbox_work_write.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_sandbox_work_read_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_sandbox_work_read.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_sandbox_work_read.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_raw_covid19_write_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_raw_covid19_write.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_raw_covid19_write.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_raw_covid19_read_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_raw_covid19_read.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_raw_covid19_read.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_budget_book_write_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_budget_book_write.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_budget_book_write.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_budget_book_read_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_budget_book_read.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_budget_book_read.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_cortex_admin_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_cortex_admin.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_cortex_admin.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_cortex_use_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_cortex_use.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_cortex_use.name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "fr_managed_access_test_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.fr_managed_access_test.name
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_managed_access_test.name
   parent_role_name = "SYSADMIN"
 }
 
-# --- 役割ロール 4個 ---
 resource "snowflake_grant_account_role" "developer_role_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.developer_role.name
+  provider         = snowflake.securityadmin
+  role_name        = var.developer_role_name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "viewer_role_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.viewer_role.name
+  provider         = snowflake.securityadmin
+  role_name        = var.viewer_role_name
   parent_role_name = "SYSADMIN"
 }
 
 resource "snowflake_grant_account_role" "schema_owner_role_to_sysadmin" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.schema_owner_role.name
+  provider         = snowflake.securityadmin
+  role_name        = var.schema_owner_role_name
   parent_role_name = "SYSADMIN"
 }
 
@@ -198,73 +188,58 @@ resource "snowflake_grant_account_role" "schema_owner_role_to_sysadmin" {
 # ③ マトリクス①: FR_ ロールへのオブジェクト権限付与
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# FR_WH_SANDBOX_OPERATE: SANDBOX_WH USAGE + OPERATE
-# -----------------------------------------------------------------------------
+# --- FR_WH_SANDBOX_OPERATE ---
 resource "snowflake_grant_privileges_to_account_role" "fr_wh_sandbox_operate_grant" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_wh_sandbox_operate.name
   privileges        = ["USAGE", "OPERATE"]
-
   on_account_object {
     object_type = "WAREHOUSE"
-    object_name = snowflake_warehouse.sandbox.name
+    object_name = var.sandbox_wh_name
   }
 }
 
-# -----------------------------------------------------------------------------
-# FR_WH_SANDBOX_USE: SANDBOX_WH USAGE のみ
-# -----------------------------------------------------------------------------
+# --- FR_WH_SANDBOX_USE ---
 resource "snowflake_grant_privileges_to_account_role" "fr_wh_sandbox_use_grant" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_wh_sandbox_use.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "WAREHOUSE"
-    object_name = snowflake_warehouse.sandbox.name
+    object_name = var.sandbox_wh_name
   }
 }
 
-# -----------------------------------------------------------------------------
-# FR_WH_MV_OPERATE: MV_WH USAGE + OPERATE
-# -----------------------------------------------------------------------------
+# --- FR_WH_MV_OPERATE ---
 resource "snowflake_grant_privileges_to_account_role" "fr_wh_mv_operate_grant" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_wh_mv_operate.name
   privileges        = ["USAGE", "OPERATE"]
-
   on_account_object {
     object_type = "WAREHOUSE"
-    object_name = snowflake_warehouse.mv_wh.name
+    object_name = var.mv_wh_name
   }
 }
 
-# -----------------------------------------------------------------------------
-# FR_WH_MV_USE: MV_WH USAGE のみ
-# -----------------------------------------------------------------------------
+# --- FR_WH_MV_USE ---
 resource "snowflake_grant_privileges_to_account_role" "fr_wh_mv_use_grant" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_wh_mv_use.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "WAREHOUSE"
-    object_name = snowflake_warehouse.mv_wh.name
+    object_name = var.mv_wh_name
   }
 }
 
-# -----------------------------------------------------------------------------
-# FR_SANDBOX_WORK_WRITE: SANDBOX_DB + WORK スキーマ + future tables + EXTERNAL_S3_STAGE
-# -----------------------------------------------------------------------------
+# --- FR_SANDBOX_WORK_WRITE ---
 resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_write_db" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_sandbox_work_write.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "DATABASE"
-    object_name = snowflake_database.sandbox.name
+    object_name = var.sandbox_db_name
   }
 }
 
@@ -272,9 +247,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_write_sch
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_sandbox_work_write.name
   privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.sandbox.name}\".\"${snowflake_schema.work.name}\""
+    schema_name = "\"${var.sandbox_db_name}\".\"${var.work_schema_name}\""
   }
 }
 
@@ -282,11 +256,10 @@ resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_write_fut
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_sandbox_work_write.name
   privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE"]
-
   on_schema_object {
     future {
       object_type_plural = "TABLES"
-      in_schema          = "\"${snowflake_database.sandbox.name}\".\"${snowflake_schema.work.name}\""
+      in_schema          = "\"${var.sandbox_db_name}\".\"${var.work_schema_name}\""
     }
   }
 }
@@ -295,24 +268,20 @@ resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_write_sta
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_sandbox_work_write.name
   privileges        = ["USAGE"]
-
   on_schema_object {
     object_type = "STAGE"
-    object_name = "\"${snowflake_stage.external_s3.database}\".\"${snowflake_stage.external_s3.schema}\".\"${snowflake_stage.external_s3.name}\""
+    object_name = "\"${var.external_s3_stage_database}\".\"${var.external_s3_stage_schema}\".\"${var.external_s3_stage_name}\""
   }
 }
 
-# -----------------------------------------------------------------------------
-# FR_SANDBOX_WORK_READ: SANDBOX_DB + WORK スキーマ + future tables
-# -----------------------------------------------------------------------------
+# --- FR_SANDBOX_WORK_READ ---
 resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_read_db" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_sandbox_work_read.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "DATABASE"
-    object_name = snowflake_database.sandbox.name
+    object_name = var.sandbox_db_name
   }
 }
 
@@ -320,9 +289,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_read_sche
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_sandbox_work_read.name
   privileges        = ["USAGE"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.sandbox.name}\".\"${snowflake_schema.work.name}\""
+    schema_name = "\"${var.sandbox_db_name}\".\"${var.work_schema_name}\""
   }
 }
 
@@ -330,26 +298,22 @@ resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_read_futu
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_sandbox_work_read.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     future {
       object_type_plural = "TABLES"
-      in_schema          = "\"${snowflake_database.sandbox.name}\".\"${snowflake_schema.work.name}\""
+      in_schema          = "\"${var.sandbox_db_name}\".\"${var.work_schema_name}\""
     }
   }
 }
 
-# -----------------------------------------------------------------------------
-# FR_RAW_COVID19_WRITE: RAW_DB + COVID19 スキーマ + ステージ + 外部テーブル + MV
-# -----------------------------------------------------------------------------
+# --- FR_RAW_COVID19_WRITE ---
 resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_write_db" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_write.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "DATABASE"
-    object_name = snowflake_database.raw_db.name
+    object_name = var.raw_db_name
   }
 }
 
@@ -357,9 +321,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_write_sche
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_write.name
   privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\""
+    schema_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\""
   }
 }
 
@@ -367,11 +330,10 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_write_futu
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_write.name
   privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE"]
-
   on_schema_object {
     future {
       object_type_plural = "TABLES"
-      in_schema          = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\""
+      in_schema          = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\""
     }
   }
 }
@@ -380,10 +342,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_write_jhu_
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_write.name
   privileges        = ["USAGE"]
-
   on_schema_object {
     object_type = "STAGE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_s3_stage.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.covid19_s3_stage_name}\""
   }
 }
 
@@ -391,10 +352,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_write_worl
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_write.name
   privileges        = ["USAGE"]
-
   on_schema_object {
     object_type = "STAGE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_world_testing_stage.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.covid19_world_testing_stage_name}\""
   }
 }
 
@@ -402,10 +362,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_write_ext_
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_write.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     object_type = "EXTERNAL TABLE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_external_table.ext_jhu_timeseries.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.ext_jhu_timeseries_name}\""
   }
 }
 
@@ -413,10 +372,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_write_ext_
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_write.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     object_type = "EXTERNAL TABLE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_external_table.ext_covid19_world_testing.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.ext_covid19_world_testing_name}\""
   }
 }
 
@@ -424,10 +382,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_write_mv_j
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_write.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     object_type = "MATERIALIZED VIEW"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_jhu_timeseries.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.mv_jhu_timeseries_name}\""
   }
 }
 
@@ -435,24 +392,20 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_write_mv_w
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_write.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     object_type = "MATERIALIZED VIEW"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_covid19_world_testing.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.mv_covid19_world_testing_name}\""
   }
 }
 
-# -----------------------------------------------------------------------------
-# FR_RAW_COVID19_READ: RAW_DB + COVID19 スキーマ + ステージ + 外部テーブル + MV (READ)
-# -----------------------------------------------------------------------------
+# --- FR_RAW_COVID19_READ ---
 resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_read_db" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_read.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "DATABASE"
-    object_name = snowflake_database.raw_db.name
+    object_name = var.raw_db_name
   }
 }
 
@@ -460,9 +413,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_read_schem
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_read.name
   privileges        = ["USAGE"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\""
+    schema_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\""
   }
 }
 
@@ -470,11 +422,10 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_read_futur
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_read.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     future {
       object_type_plural = "TABLES"
-      in_schema          = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\""
+      in_schema          = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\""
     }
   }
 }
@@ -483,10 +434,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_read_jhu_s
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_read.name
   privileges        = ["USAGE"]
-
   on_schema_object {
     object_type = "STAGE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_s3_stage.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.covid19_s3_stage_name}\""
   }
 }
 
@@ -494,10 +444,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_read_world
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_read.name
   privileges        = ["USAGE"]
-
   on_schema_object {
     object_type = "STAGE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_world_testing_stage.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.covid19_world_testing_stage_name}\""
   }
 }
 
@@ -505,10 +454,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_read_ext_j
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_read.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     object_type = "EXTERNAL TABLE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_external_table.ext_jhu_timeseries.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.ext_jhu_timeseries_name}\""
   }
 }
 
@@ -516,10 +464,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_read_ext_w
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_read.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     object_type = "EXTERNAL TABLE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_external_table.ext_covid19_world_testing.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.ext_covid19_world_testing_name}\""
   }
 }
 
@@ -527,10 +474,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_read_mv_jh
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_read.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     object_type = "MATERIALIZED VIEW"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_jhu_timeseries.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.mv_jhu_timeseries_name}\""
   }
 }
 
@@ -538,24 +484,20 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_covid19_read_mv_wo
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_raw_covid19_read.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     object_type = "MATERIALIZED VIEW"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_materialized_view.mv_covid19_world_testing.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.covid19_schema_name}\".\"${var.mv_covid19_world_testing_name}\""
   }
 }
 
-# -----------------------------------------------------------------------------
-# FR_BUDGET_BOOK_WRITE: RAW_DB + BUDGET_BOOK スキーマ + テーブル + ステージ + ファイルフォーマット
-# -----------------------------------------------------------------------------
+# --- FR_BUDGET_BOOK_WRITE ---
 resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_write_db" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_write.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "DATABASE"
-    object_name = snowflake_database.raw_db.name
+    object_name = var.raw_db_name
   }
 }
 
@@ -563,9 +505,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_write_sche
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_write.name
   privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW", "CREATE STAGE"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\""
+    schema_name = "\"${var.raw_db_name}\".\"${var.budget_book_schema_name}\""
   }
 }
 
@@ -573,10 +514,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_write_tran
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_write.name
   privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"]
-
   on_schema_object {
     object_type = "TABLE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\".\"${snowflake_table.budget_book_transactions.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.budget_book_schema_name}\".\"${var.budget_book_transactions_name}\""
   }
 }
 
@@ -584,11 +524,10 @@ resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_write_futu
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_write.name
   privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"]
-
   on_schema_object {
     future {
       object_type_plural = "TABLES"
-      in_schema          = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\""
+      in_schema          = "\"${var.raw_db_name}\".\"${var.budget_book_schema_name}\""
     }
   }
 }
@@ -597,10 +536,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_write_stag
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_write.name
   privileges        = ["READ", "WRITE"]
-
   on_schema_object {
     object_type = "STAGE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\".\"${snowflake_stage.budget_book_stage.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.budget_book_schema_name}\".\"${var.budget_book_stage_name}\""
   }
 }
 
@@ -608,24 +546,20 @@ resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_write_file
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_write.name
   privileges        = ["USAGE"]
-
   on_schema_object {
     object_type = "FILE FORMAT"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\".\"${snowflake_file_format.budget_book_csv_format.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.budget_book_schema_name}\".\"${var.budget_book_csv_format_name}\""
   }
 }
 
-# -----------------------------------------------------------------------------
-# FR_BUDGET_BOOK_READ: RAW_DB + BUDGET_BOOK スキーマ + テーブル + ステージ + ファイルフォーマット (READ)
-# -----------------------------------------------------------------------------
+# --- FR_BUDGET_BOOK_READ ---
 resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_read_db" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_read.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "DATABASE"
-    object_name = snowflake_database.raw_db.name
+    object_name = var.raw_db_name
   }
 }
 
@@ -633,9 +567,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_read_schem
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_read.name
   privileges        = ["USAGE"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\""
+    schema_name = "\"${var.raw_db_name}\".\"${var.budget_book_schema_name}\""
   }
 }
 
@@ -643,10 +576,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_read_trans
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_read.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     object_type = "TABLE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\".\"${snowflake_table.budget_book_transactions.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.budget_book_schema_name}\".\"${var.budget_book_transactions_name}\""
   }
 }
 
@@ -654,11 +586,10 @@ resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_read_futur
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_read.name
   privileges        = ["SELECT"]
-
   on_schema_object {
     future {
       object_type_plural = "TABLES"
-      in_schema          = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\""
+      in_schema          = "\"${var.raw_db_name}\".\"${var.budget_book_schema_name}\""
     }
   }
 }
@@ -667,10 +598,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_read_stage
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_read.name
   privileges        = ["READ"]
-
   on_schema_object {
     object_type = "STAGE"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\".\"${snowflake_stage.budget_book_stage.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.budget_book_schema_name}\".\"${var.budget_book_stage_name}\""
   }
 }
 
@@ -678,25 +608,20 @@ resource "snowflake_grant_privileges_to_account_role" "fr_budget_book_read_file_
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_budget_book_read.name
   privileges        = ["USAGE"]
-
   on_schema_object {
     object_type = "FILE FORMAT"
-    object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.budget_book.name}\".\"${snowflake_file_format.budget_book_csv_format.name}\""
+    object_name = "\"${var.raw_db_name}\".\"${var.budget_book_schema_name}\".\"${var.budget_book_csv_format_name}\""
   }
 }
 
-# -----------------------------------------------------------------------------
-# FR_CORTEX_ADMIN: CORTEX_DB 全スキーマ + ステージ WRITE + CREATE CORTEX SEARCH SERVICE
-#                  + SNOWFLAKE DB ロール
-# -----------------------------------------------------------------------------
+# --- FR_CORTEX_ADMIN ---
 resource "snowflake_grant_privileges_to_account_role" "fr_cortex_admin_db" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_cortex_admin.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "DATABASE"
-    object_name = snowflake_database.cortex.name
+    object_name = var.cortex_db_name
   }
 }
 
@@ -704,9 +629,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_cortex_admin_semantic_
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_cortex_admin.name
   privileges        = ["USAGE"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\""
+    schema_name = "\"${var.cortex_db_name}\".\"${var.semantic_models_schema_name}\""
   }
 }
 
@@ -714,9 +638,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_cortex_admin_search_se
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_cortex_admin.name
   privileges        = ["USAGE", "CREATE CORTEX SEARCH SERVICE"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\""
+    schema_name = "\"${var.cortex_db_name}\".\"${var.search_services_schema_name}\""
   }
 }
 
@@ -724,9 +647,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_cortex_admin_agents_sc
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_cortex_admin.name
   privileges        = ["USAGE"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\""
+    schema_name = "\"${var.cortex_db_name}\".\"${var.agents_schema_name}\""
   }
 }
 
@@ -734,10 +656,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_cortex_admin_stage" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_cortex_admin.name
   privileges        = ["READ", "WRITE"]
-
   on_schema_object {
     object_type = "STAGE"
-    object_name = "\"${snowflake_stage.semantic_model_files.database}\".\"${snowflake_stage.semantic_model_files.schema}\".\"${snowflake_stage.semantic_model_files.name}\""
+    object_name = "\"${var.semantic_model_stage_database}\".\"${var.semantic_model_stage_schema}\".\"${var.semantic_model_stage_name}\""
   }
 }
 
@@ -753,17 +674,14 @@ resource "snowflake_grant_database_role" "fr_cortex_admin_cortex_agent_user" {
   parent_role_name   = snowflake_account_role.fr_cortex_admin.name
 }
 
-# -----------------------------------------------------------------------------
-# FR_CORTEX_USE: CORTEX_DB 全スキーマ + ステージ READ + SNOWFLAKE DB ロール
-# -----------------------------------------------------------------------------
+# --- FR_CORTEX_USE ---
 resource "snowflake_grant_privileges_to_account_role" "fr_cortex_use_db" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_cortex_use.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "DATABASE"
-    object_name = snowflake_database.cortex.name
+    object_name = var.cortex_db_name
   }
 }
 
@@ -771,9 +689,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_cortex_use_semantic_mo
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_cortex_use.name
   privileges        = ["USAGE"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.semantic_models.name}\""
+    schema_name = "\"${var.cortex_db_name}\".\"${var.semantic_models_schema_name}\""
   }
 }
 
@@ -781,9 +698,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_cortex_use_search_serv
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_cortex_use.name
   privileges        = ["USAGE"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\""
+    schema_name = "\"${var.cortex_db_name}\".\"${var.search_services_schema_name}\""
   }
 }
 
@@ -791,9 +707,8 @@ resource "snowflake_grant_privileges_to_account_role" "fr_cortex_use_agents_sche
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_cortex_use.name
   privileges        = ["USAGE"]
-
   on_schema {
-    schema_name = "\"${snowflake_database.cortex.name}\".\"${snowflake_schema.agents.name}\""
+    schema_name = "\"${var.cortex_db_name}\".\"${var.agents_schema_name}\""
   }
 }
 
@@ -801,10 +716,9 @@ resource "snowflake_grant_privileges_to_account_role" "fr_cortex_use_stage" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_cortex_use.name
   privileges        = ["READ"]
-
   on_schema_object {
     object_type = "STAGE"
-    object_name = "\"${snowflake_stage.semantic_model_files.database}\".\"${snowflake_stage.semantic_model_files.schema}\".\"${snowflake_stage.semantic_model_files.name}\""
+    object_name = "\"${var.semantic_model_stage_database}\".\"${var.semantic_model_stage_schema}\".\"${var.semantic_model_stage_name}\""
   }
 }
 
@@ -820,17 +734,14 @@ resource "snowflake_grant_database_role" "fr_cortex_use_cortex_agent_user" {
   parent_role_name   = snowflake_account_role.fr_cortex_use.name
 }
 
-# -----------------------------------------------------------------------------
-# FR_MANAGED_ACCESS_TEST: MANAGED_ACCESS_DB + MANAGED_SCHEMA
-# -----------------------------------------------------------------------------
+# --- FR_MANAGED_ACCESS_TEST ---
 resource "snowflake_grant_privileges_to_account_role" "fr_managed_access_test_db" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_managed_access_test.name
   privileges        = ["USAGE"]
-
   on_account_object {
     object_type = "DATABASE"
-    object_name = snowflake_database.managed_access.name
+    object_name = var.managed_access_db_name
   }
 }
 
@@ -838,101 +749,7 @@ resource "snowflake_grant_privileges_to_account_role" "fr_managed_access_test_sc
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_managed_access_test.name
   privileges        = ["USAGE", "CREATE TABLE"]
-
-  depends_on = [snowflake_grant_ownership.managed_schema_to_schema_owner]
-
   on_schema {
-    schema_name = "\"${snowflake_database.managed_access.name}\".\"${snowflake_schema.managed.name}\""
+    schema_name = "\"${var.managed_access_db_name}\".\"${var.managed_schema_name}\""
   }
 }
-
-# =============================================================================
-# ④ マトリクス②: 役割ロールが FR_ ロールを継承
-# =============================================================================
-
-# --- DEVELOPER_ROLE が継承する FR_ ロール ---
-resource "snowflake_grant_account_role" "developer_inherits_wh_sandbox_operate" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_wh_sandbox_operate.name
-  parent_role_name = snowflake_account_role.developer_role.name
-}
-
-resource "snowflake_grant_account_role" "developer_inherits_wh_mv_operate" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_wh_mv_operate.name
-  parent_role_name = snowflake_account_role.developer_role.name
-}
-
-resource "snowflake_grant_account_role" "developer_inherits_sandbox_work_write" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_sandbox_work_write.name
-  parent_role_name = snowflake_account_role.developer_role.name
-}
-
-resource "snowflake_grant_account_role" "developer_inherits_raw_covid19_write" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_raw_covid19_write.name
-  parent_role_name = snowflake_account_role.developer_role.name
-}
-
-resource "snowflake_grant_account_role" "developer_inherits_budget_book_write" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_budget_book_write.name
-  parent_role_name = snowflake_account_role.developer_role.name
-}
-
-resource "snowflake_grant_account_role" "developer_inherits_cortex_use" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_cortex_use.name
-  parent_role_name = snowflake_account_role.developer_role.name
-}
-
-resource "snowflake_grant_account_role" "developer_inherits_cortex_admin" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_cortex_admin.name
-  parent_role_name = snowflake_account_role.developer_role.name
-}
-
-resource "snowflake_grant_account_role" "developer_inherits_managed_access_test" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_managed_access_test.name
-  parent_role_name = snowflake_account_role.developer_role.name
-}
-
-# --- VIEWER_ROLE が継承する FR_ ロール ---
-resource "snowflake_grant_account_role" "viewer_inherits_wh_sandbox_use" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_wh_sandbox_use.name
-  parent_role_name = snowflake_account_role.viewer_role.name
-}
-
-resource "snowflake_grant_account_role" "viewer_inherits_wh_mv_use" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_wh_mv_use.name
-  parent_role_name = snowflake_account_role.viewer_role.name
-}
-
-resource "snowflake_grant_account_role" "viewer_inherits_sandbox_work_read" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_sandbox_work_read.name
-  parent_role_name = snowflake_account_role.viewer_role.name
-}
-
-resource "snowflake_grant_account_role" "viewer_inherits_raw_covid19_read" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_raw_covid19_read.name
-  parent_role_name = snowflake_account_role.viewer_role.name
-}
-
-resource "snowflake_grant_account_role" "viewer_inherits_budget_book_read" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_budget_book_read.name
-  parent_role_name = snowflake_account_role.viewer_role.name
-}
-
-resource "snowflake_grant_account_role" "viewer_inherits_cortex_use" {
-  provider         = snowflake.securityadmin
-  role_name        = snowflake_account_role.fr_cortex_use.name
-  parent_role_name = snowflake_account_role.viewer_role.name
-}
-
