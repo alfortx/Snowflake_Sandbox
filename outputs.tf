@@ -210,7 +210,7 @@ output "cortex_agent_info" {
       SHOW AGENTS IN SCHEMA ${snowflake_database.cortex.name}.${var.cortex_agents_schema_name};
 
     【Snowflake Intelligence から使う】
-      1. Snowsight にログイン（ロール: ${var.cortex_role_name}）
+      1. Snowsight にログイン（ロール: DEVELOPER_ROLE）
       2. 左メニュー「AI & ML」→「Intelligence」を選択
       3. エージェント「${var.agent_name}」をクリック
       4. 日本語で質問を入力！

@@ -260,7 +260,7 @@ Terraform が以下のリソースを自動で作成しています。
 ### 6-1. Snowflake Intelligence から使う
 
 1. [Snowflake WebUI](https://app.snowflake.com/) にログイン
-2. ロールを **`CORTEX_ROLE`** に切り替える
+2. ロールを **`DEVELOPER_ROLE`** に切り替える
 3. 左メニュー「**AI & ML**」→「**Intelligence**」を選択
 4. エージェント一覧から **`COVID19_AGENT`** を選択
 5. 日本語で質問を入力！

@@ -10,9 +10,8 @@ Snowflake RBAC ベストプラクティスに基づき、**機能的ロール（
 
 | ロール名 | 用途 | 付与ユーザー |
 |---------|------|-----------|
-| `DEVELOPER_ROLE` | 開発者（読み書き + Cortex 利用） | sandbox_user, MAIN |
+| `DEVELOPER_ROLE` | 開発者（読み書き + Cortex 管理含む） | sandbox_user, MAIN |
 | `VIEWER_ROLE` | 閲覧者（読み取り専用 + Cortex 利用） | sandbox_user, MAIN |
-| `CORTEX_ROLE` | Cortex 管理者（AI リソース管理） | sandbox_user |
 | `SCHEMA_OWNER_ROLE` | Managed Access スキーマ所有者 | sandbox_user |
 
 ---
@@ -77,7 +76,7 @@ Snowflake RBAC ベストプラクティスに基づき、**機能的ロール（
 | BUDGET_BOOK_SEMANTIC（セマンティックビュー） | SELECT | SELECT |
 | COVID19_AGENT | USAGE | USAGE |
 | BUDGET_BOOK_AGENT | USAGE | USAGE |
-| BUDGET_BOOK_SEARCH | USAGE + MONITOR | USAGE + MONITOR |
+| BUDGET_BOOK_SEARCH | USAGE + MONITOR | USAGE |
 | SNOWFLAKE.CORTEX_USER（DB ロール） | ✓ | ✓ |
 | SNOWFLAKE.CORTEX_AGENT_USER（DB ロール） | ✓ | ✓ |
 
@@ -95,21 +94,21 @@ Snowflake RBAC ベストプラクティスに基づき、**機能的ロール（
 
 ## マトリクス ②: 役割ロール × 機能的ロール（継承関係）
 
-| 機能的ロール（FR_） | DEVELOPER | VIEWER | CORTEX |
-|--------------------|:---------:|:------:|:------:|
-| FR_WH_SANDBOX_OPERATE | ✓ | — | ✓ |
-| FR_WH_SANDBOX_USE | — | ✓ | — |
-| FR_WH_MV_OPERATE | ✓ | — | ✓ |
-| FR_WH_MV_USE | — | ✓ | — |
-| FR_SANDBOX_WORK_WRITE | ✓ | — | — |
-| FR_SANDBOX_WORK_READ | — | ✓ | — |
-| FR_RAW_COVID19_WRITE | ✓ | — | — |
-| FR_RAW_COVID19_READ | — | ✓ | ✓ |
-| FR_BUDGET_BOOK_WRITE | ✓ | — | — |
-| FR_BUDGET_BOOK_READ | — | ✓ | ✓ |
-| FR_CORTEX_USE | ✓ | ✓ | — |
-| FR_CORTEX_ADMIN | — | — | ✓ |
-| FR_MANAGED_ACCESS_TEST | ✓ | — | — |
+| 機能的ロール（FR_） | DEVELOPER | VIEWER |
+|--------------------|:---------:|:------:|
+| FR_WH_SANDBOX_OPERATE | ✓ | — |
+| FR_WH_SANDBOX_USE | — | ✓ |
+| FR_WH_MV_OPERATE | ✓ | — |
+| FR_WH_MV_USE | — | ✓ |
+| FR_SANDBOX_WORK_WRITE | ✓ | — |
+| FR_SANDBOX_WORK_READ | — | ✓ |
+| FR_RAW_COVID19_WRITE | ✓ | — |
+| FR_RAW_COVID19_READ | — | ✓ |
+| FR_BUDGET_BOOK_WRITE | ✓ | — |
+| FR_BUDGET_BOOK_READ | — | ✓ |
+| FR_CORTEX_USE | ✓ | ✓ |
+| FR_CORTEX_ADMIN | ✓ | — |
+| FR_MANAGED_ACCESS_TEST | ✓ | — |
 
 > SCHEMA_OWNER_ROLE はすでに機能的ロールとして独立しているため対象外。
 
@@ -117,5 +116,5 @@ Snowflake RBAC ベストプラクティスに基づき、**機能的ロール（
 
 ## SYSADMIN 継承
 
-全カスタムロール（FR_ × 13個 + DEVELOPER / VIEWER / CORTEX / SCHEMA_OWNER）を `SYSADMIN` に継承。
+全カスタムロール（FR_ × 13個 + DEVELOPER / VIEWER / SCHEMA_OWNER）を `SYSADMIN` に継承。
 これにより SYSADMIN は全権限を透過的に把握・管理できる。

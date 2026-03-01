@@ -170,6 +170,19 @@ resource "snowflake_execute" "budget_book_search_service_grant_cortex" {
   }
 }
 
+# Cortex Search サービスへの MONITOR 権限（FR_CORTEX_ADMIN）
+resource "snowflake_execute" "budget_book_search_service_monitor_cortex" {
+  provider   = snowflake.sysadmin
+  depends_on = [snowflake_execute.budget_book_search_service]
+
+  execute = "GRANT MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_admin_role_name}"
+  revert  = "REVOKE MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_admin_role_name}"
+
+  lifecycle {
+    replace_triggered_by = [snowflake_execute.budget_book_search_service]
+  }
+}
+
 # =============================================================================
 # Cortex Agent: BUDGET_BOOK_AGENT
 #   cortex_analyst_text_to_sql + cortex_search の2ツール構成
@@ -278,18 +291,6 @@ resource "snowflake_execute" "budget_book_search_service_grant_use" {
   }
 }
 
-# BUDGET_BOOK_SEARCH への MONITOR 権限（FR_CORTEX_USE）
-resource "snowflake_execute" "budget_book_search_monitor_use" {
-  provider   = snowflake.sysadmin
-  depends_on = [snowflake_execute.budget_book_search_service]
-
-  execute = "GRANT MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" TO ROLE ${var.fr_cortex_use_role_name}"
-  revert  = "REVOKE MONITOR ON CORTEX SEARCH SERVICE \"${snowflake_database.cortex.name}\".\"${snowflake_schema.search_services.name}\".\"${var.budget_book_search_service_name}\" FROM ROLE ${var.fr_cortex_use_role_name}"
-
-  lifecycle {
-    replace_triggered_by = [snowflake_execute.budget_book_search_service]
-  }
-}
 
 # BUDGET_BOOK_AGENT への USAGE 権限（FR_CORTEX_USE）
 resource "snowflake_execute" "budget_book_agent_grant_use" {

@@ -161,12 +161,6 @@ variable "semantic_model_stage_name" {
   default     = "SEMANTIC_MODEL_FILES"
 }
 
-variable "cortex_role_name" {
-  description = "Cortexリソースの配置・変更・利用権限を持つロール名"
-  type        = string
-  default     = "CORTEX_ROLE"
-}
-
 # =============================================================================
 # 機能的ロール（FR_*）変数
 # =============================================================================

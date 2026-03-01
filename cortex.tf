@@ -7,11 +7,7 @@
 #   │   └── SEMANTIC_MODEL_FILES ステージ（YAMLファイル格納用）
 #   └── SEARCH_SERVICES スキーマ  ← Cortex Search サービス配置先
 #
-#   CORTEX_ROLE ← 上記リソースの配置・変更・利用権限を持つロール
-#     - SNOWFLAKE.CORTEX_USER DB ロール（Cortex ML 関数の使用権限）
-#     - CORTEX_DB 以下への各種権限
-#     - SANDBOX_WH の使用権限
-#   sandbox_user に CORTEX_ROLE を付与
+#   Cortex 権限は FR_CORTEX_ADMIN / FR_CORTEX_USE で管理（functional_roles.tf 参照）
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -60,22 +56,3 @@ resource "snowflake_stage" "semantic_model_files" {
   directory        = "ENABLE = true"
 }
 
-# -----------------------------------------------------------------------------
-# Role: Cortex リソースの操作権限を持つロール
-# -----------------------------------------------------------------------------
-resource "snowflake_account_role" "cortex_role" {
-  provider = snowflake.securityadmin
-
-  name    = var.cortex_role_name
-  comment = "Cortex Analyst・Cortex Search のリソースを配置・変更・利用できるロール"
-}
-
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# CORTEX_ROLE を sandbox_user に付与
-# -----------------------------------------------------------------------------
-resource "snowflake_grant_account_role" "cortex_role_to_user" {
-  provider  = snowflake.securityadmin
-  role_name = snowflake_account_role.cortex_role.name
-  user_name = snowflake_user.sandbox_user.name
-}
