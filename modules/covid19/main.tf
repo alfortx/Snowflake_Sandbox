@@ -53,7 +53,7 @@ resource "snowflake_stage" "covid19_world_testing_stage" {
   name        = "COVID19_WORLD_TESTING_STAGE"
   url         = "s3://covid19-lake/rearc-covid-19-world-cases-deaths-testing/csv/"
   file_format = "FORMAT_NAME = RAW_DB.COVID19.CSV_FORMAT"
-  comment     = "COVID-19 world cases, deaths, testing, vaccination data"
+  comment     = "COVID-19 world cases, deaths, testing, vaccination data (JHUと結合可能)"
   depends_on  = [snowflake_file_format.csv_format]
   lifecycle { ignore_changes = [directory] }
 }
@@ -153,7 +153,7 @@ resource "snowflake_external_table" "ext_covid19_world_testing" {
   database    = snowflake_database.raw_db.name
   schema      = snowflake_schema.covid19.name
   name        = "EXT_COVID19_WORLD_TESTING"
-  comment     = "COVID-19 world testing, vaccination, hospital data"
+  comment     = "COVID-19 world testing, vaccination, hospital data (TRY_*で空文字列対応)"
   location    = "@${snowflake_database.raw_db.name}.${snowflake_schema.covid19.name}.${snowflake_stage.covid19_world_testing_stage.name}"
   file_format = "FORMAT_NAME = ${snowflake_database.raw_db.name}.${snowflake_schema.covid19.name}.${snowflake_file_format.csv_format.name}"
 
