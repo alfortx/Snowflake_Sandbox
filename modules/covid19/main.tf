@@ -319,3 +319,61 @@ resource "snowflake_grant_ownership" "ext_jhu_timeseries_to_sysadmin" {
     object_name = "\"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_external_table.ext_jhu_timeseries.name}\""
   }
 }
+
+# NYTimes US state-level COVID-19 data (2020-01-21 to 2022-06-15)
+resource "snowflake_stage" "covid19_nyt_usa_stage" {
+  provider    = snowflake.sysadmin
+  database    = snowflake_database.raw_db.name
+  schema      = snowflake_schema.covid19.name
+  name        = "COVID19_NYT_USA_STAGE"
+  url         = "s3://covid19-lake/rearc-covid-19-nyt-data-in-usa/csv/us-states/"
+  file_format = "FORMAT_NAME = RAW_DB.COVID19.CSV_FORMAT"
+  comment     = "NYTimes US state-level COVID-19 data (no credentials required, 2020-01 to 2022-06)"
+  depends_on  = [snowflake_file_format.csv_format]
+  lifecycle { ignore_changes = [directory] }
+}
+
+resource "snowflake_execute" "covid19_nyt_usa_stage_directory" {
+  provider   = snowflake.sysadmin
+  depends_on = [snowflake_stage.covid19_nyt_usa_stage]
+  execute    = "ALTER STAGE \"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_nyt_usa_stage.name}\" SET DIRECTORY = (ENABLE = TRUE)"
+  revert     = "ALTER STAGE \"${snowflake_database.raw_db.name}\".\"${snowflake_schema.covid19.name}\".\"${snowflake_stage.covid19_nyt_usa_stage.name}\" SET DIRECTORY = (ENABLE = FALSE)"
+}
+
+resource "snowflake_external_table" "ext_nyt_usa_states" {
+  provider    = snowflake.sysadmin
+  database    = snowflake_database.raw_db.name
+  schema      = snowflake_schema.covid19.name
+  name        = "EXT_NYT_USA_STATES"
+  comment     = "NYTimes 米国州別COVID-19累積データ（感染者数・死亡者数 / 2020-01-21〜2022-06-15）"
+  location    = "@${snowflake_database.raw_db.name}.${snowflake_schema.covid19.name}.${snowflake_stage.covid19_nyt_usa_stage.name}/"
+  file_format = "FORMAT_NAME = ${snowflake_database.raw_db.name}.${snowflake_schema.covid19.name}.${snowflake_file_format.csv_format.name}"
+
+  column {
+    name = "DATE"
+    type = "DATE"
+    as   = "TRY_TO_DATE(GET(VALUE, 'c1')::VARCHAR)"
+  }
+  column {
+    name = "STATE"
+    type = "VARCHAR(100)"
+    as   = "GET(VALUE, 'c2')::VARCHAR"
+  }
+  column {
+    name = "FIPS"
+    type = "NUMBER(38,0)"
+    as   = "TRY_TO_NUMBER(GET(VALUE, 'c3')::VARCHAR)"
+  }
+  column {
+    name = "CASES"
+    type = "NUMBER(38,0)"
+    as   = "TRY_TO_NUMBER(GET(VALUE, 'c4')::VARCHAR)"
+  }
+  column {
+    name = "DEATHS"
+    type = "NUMBER(38,0)"
+    as   = "TRY_TO_NUMBER(GET(VALUE, 'c5')::VARCHAR)"
+  }
+
+  depends_on = [snowflake_stage.covid19_nyt_usa_stage, snowflake_file_format.csv_format]
+}
