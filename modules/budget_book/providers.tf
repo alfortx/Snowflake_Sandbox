@@ -5,6 +5,7 @@ terraform {
       version = "~> 2.1"
       configuration_aliases = [
         snowflake.sysadmin,
+        snowflake.accountadmin,
       ]
     }
   }

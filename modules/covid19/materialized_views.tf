@@ -61,3 +61,22 @@ resource "snowflake_materialized_view" "mv_covid19_world_testing" {
 
   depends_on = [snowflake_external_table.ext_covid19_world_testing, snowflake_warehouse.mv_wh]
 }
+
+resource "snowflake_materialized_view" "mv_nyt_usa_states" {
+  provider = snowflake.sysadmin
+
+  database  = snowflake_database.raw_db.name
+  schema    = snowflake_schema.covid19.name
+  name      = "MV_NYT_USA_STATES"
+  warehouse = snowflake_warehouse.mv_wh.name
+  comment   = "EXT_NYT_USA_STATES の高速クエリ用 MV（S3 スキャン不要）"
+
+  statement = <<-SQL
+    SELECT
+      DATE, STATE, FIPS, CASES, DEATHS
+    FROM ${snowflake_database.raw_db.name}.${snowflake_schema.covid19.name}.${snowflake_external_table.ext_nyt_usa_states.name}
+    WHERE DATE IS NOT NULL
+  SQL
+
+  depends_on = [snowflake_external_table.ext_nyt_usa_states, snowflake_warehouse.mv_wh]
+}
