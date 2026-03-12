@@ -92,7 +92,8 @@ module "budget_book" {
   source = "./modules/budget_book"
 
   providers = {
-    snowflake.sysadmin = snowflake.sysadmin
+    snowflake.sysadmin    = snowflake.sysadmin
+    snowflake.accountadmin = snowflake.accountadmin
   }
 
   raw_db_name                     = module.covid19.raw_db_name
