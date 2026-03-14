@@ -9,20 +9,20 @@ Cortex Search Service を使って、表記揺れのある社名を持つ2テー
 ```mermaid
 flowchart TD
     subgraph SRC["SANDBOX_DB.WORK  ソースデータ"]
-        SI["SALES_INFO\n正式社名 15件\nCOMPANY_NAME → 索引対象"]
-        SA["SALES_ACTIVITY\n表記揺れ社名 18件\nCOMPANY_NAME → クエリ"]
+        SI["SALES_INFO<br/>正式社名 15件<br/>COMPANY_NAME → 索引対象"]
+        SA["SALES_ACTIVITY<br/>表記揺れ社名 18件<br/>COMPANY_NAME → クエリ"]
     end
 
     subgraph CSS_BOX["CORTEX_DB.SEARCH_SERVICES"]
-        CSS["COMPANY_NAME_SEARCH\nModel: arctic-embed-l-v2.0\nTARGET_LAG: 1 hour\n内部ベクトルインデックス"]
+        CSS["COMPANY_NAME_SEARCH<br/>Model: arctic-embed-l-v2.0<br/>TARGET_LAG: 1 hour<br/>内部ベクトルインデックス"]
     end
 
     subgraph PROC_BOX["Stored Procedure: MATCH_ALL_COMPANIES"]
-        PROC["① SALES_ACTIVITY を1社ずつ取得\n② 社名を JSON 文字列に変換\n③ SEARCH_PREVIEW でクエリ\n④ LATERAL FLATTEN で行展開\n⑤ COMPANY_MATCH_RESULT へ INSERT"]
+        PROC["① SALES_ACTIVITY を1社ずつ取得<br/>② 社名を JSON 文字列に変換<br/>③ SEARCH_PREVIEW でクエリ<br/>④ LATERAL FLATTEN で行展開<br/>⑤ COMPANY_MATCH_RESULT へ INSERT"]
     end
 
     subgraph RESULT_BOX["SANDBOX_DB.WORK  名寄せ結果"]
-        MR["COMPANY_MATCH_RESULT\n18社 × 3候補 = 54行\nACTIVITY_COMPANY: 元の表記揺れ社名\nMATCHED_COMPANY: マッチした正式社名\nRELEVANCE_SCORE / MATCH_RANK"]
+        MR["COMPANY_MATCH_RESULT<br/>18社 × 3候補 = 54行<br/>ACTIVITY_COMPANY: 元の表記揺れ社名<br/>MATCHED_COMPANY: マッチした正式社名<br/>RELEVANCE_SCORE / MATCH_RANK"]
     end
 
     subgraph ANA["分析クエリ STEP 3"]
