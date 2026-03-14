@@ -246,7 +246,7 @@ resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_write_db"
 resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_write_schema" {
   provider          = snowflake.securityadmin
   account_role_name = snowflake_account_role.fr_sandbox_work_write.name
-  privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW"]
+  privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW", "CREATE PROCEDURE"]
   on_schema {
     schema_name = "\"${var.sandbox_db_name}\".\"${var.work_schema_name}\""
   }
