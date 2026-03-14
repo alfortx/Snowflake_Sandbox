@@ -7,34 +7,36 @@ Cortex Search Service を使って、表記揺れのある社名を持つ2テー
 ## 全体フロー図
 
 ```mermaid
+%%{init: {"flowchart": {"nodeSpacing": 60, "rankSpacing": 80}}}%%
 flowchart TD
     subgraph SRC["SANDBOX_DB.WORK  ソースデータ"]
-        SI["SALES_INFO<br/>正式社名 15件<br/>COMPANY_NAME → 索引対象"]
-        SA["SALES_ACTIVITY<br/>表記揺れ社名 18件<br/>COMPANY_NAME → クエリ"]
+        direction LR
+        SI["SALES_INFO  正式社名 15件<br/>────────────────────────<br/>COMPANY_NAME  ← ベクトルインデックス対象<br/>COMPANY_CANONICAL  ← グループ名<br/>AMOUNT  /  SALES_DATE  /  PRODUCT"]
+        SA["SALES_ACTIVITY  表記揺れ社名 18件<br/>────────────────────────<br/>COMPANY_NAME  ← 検索クエリ文字列<br/>ACTIVITY_TYPE  /  ACTIVITY_DATE<br/>MEMO"]
     end
 
     subgraph CSS_BOX["CORTEX_DB.SEARCH_SERVICES"]
-        CSS["COMPANY_NAME_SEARCH<br/>Model: arctic-embed-l-v2.0<br/>TARGET_LAG: 1 hour<br/>内部ベクトルインデックス"]
+        CSS["COMPANY_NAME_SEARCH<br/>────────────────────────<br/>ON: COMPANY_NAME  （自動ベクトル化される列）<br/>MODEL: snowflake-arctic-embed-l-v2.0<br/>TARGET_LAG: 1 hour  （差分自動更新）"]
     end
 
     subgraph PROC_BOX["Stored Procedure: MATCH_ALL_COMPANIES"]
-        PROC["① SALES_ACTIVITY を1社ずつ取得<br/>② 社名を JSON 文字列に変換<br/>③ SEARCH_PREVIEW でクエリ<br/>④ LATERAL FLATTEN で行展開<br/>⑤ COMPANY_MATCH_RESULT へ INSERT"]
+        PROC["① SALES_ACTIVITY を ACTIVITY_ID 順に1社ずつ取得<br/>② 社名を JSON 文字列としてエスケープ処理<br/>③ SEARCH_PREVIEW に定数リテラルとして投入<br/>④ 返却 JSON を LATERAL FLATTEN で行展開<br/>⑤ COMPANY_MATCH_RESULT へ INSERT"]
     end
 
     subgraph RESULT_BOX["SANDBOX_DB.WORK  名寄せ結果"]
-        MR["COMPANY_MATCH_RESULT<br/>18社 × 3候補 = 54行<br/>ACTIVITY_COMPANY: 元の表記揺れ社名<br/>MATCHED_COMPANY: マッチした正式社名<br/>RELEVANCE_SCORE / MATCH_RANK"]
+        MR["COMPANY_MATCH_RESULT  18社 × 3候補 = 54行<br/>────────────────────────<br/>ACTIVITY_COMPANY  ← 元の表記揺れ社名<br/>MATCHED_COMPANY   ← マッチした正式社名<br/>RELEVANCE_SCORE   ← cosine_similarity 値<br/>MATCH_RANK        ← 1 = ベストマッチ"]
     end
 
-    subgraph ANA["分析クエリ STEP 3"]
+    subgraph ANA["分析クエリ  STEP 3"]
         direction LR
-        A1["ベストマッチ一覧"]
-        A2["スコア分布"]
-        A3["売上×営業 クロス集計"]
-        A4["非マッチ検出"]
+        A1["ベストマッチ一覧<br/>MATCH_RANK = 1"]
+        A2["スコア分布<br/>信頼度の目安"]
+        A3["売上 × 営業<br/>クロス集計"]
+        A4["非マッチ検出<br/>日立・富士通"]
     end
 
-    SI -- "02_create_search_service.sql: COMPANY_NAME を自動 EMBED" --> CSS
-    SA -- "03_matching_analysis.sql STEP2: CALL MATCH_ALL_COMPANIES" --> PROC
+    SI -- "② 02_create_search_service.sql: COMPANY_NAME を自動 EMBED してインデックス化" --> CSS
+    SA -- "③ 03_matching_analysis.sql STEP2: CALL MATCH_ALL_COMPANIES" --> PROC
     PROC -- "SEARCH_PREVIEW: クエリをベクトル化して ANN 検索" --> CSS
     CSS -- "上位 3件 + cosine_similarity を返却" --> PROC
     PROC -- "INSERT" --> MR
