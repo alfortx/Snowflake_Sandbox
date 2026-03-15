@@ -9,25 +9,25 @@ Cortex Search Service を使って、表記揺れのある社名を持つ2テー
 ```mermaid
 %%{init: {"flowchart": {"nodeSpacing": 60, "rankSpacing": 80}}}%%
 flowchart TD
-    subgraph SRC["SANDBOX_DB.WORK  ソースデータ"]
+    subgraph SRC[" ソースデータ "]
         direction LR
         SI["SALES_INFO  正式社名 15件<br/>────────────────────────<br/>COMPANY_NAME  ← ベクトルインデックス対象<br/>COMPANY_CANONICAL  ← グループ名<br/>AMOUNT  /  SALES_DATE  /  PRODUCT"]
         SA["SALES_ACTIVITY  表記揺れ社名 18件<br/>────────────────────────<br/>COMPANY_NAME  ← 検索クエリ文字列<br/>ACTIVITY_TYPE  /  ACTIVITY_DATE<br/>MEMO"]
     end
 
-    subgraph CSS_BOX["CORTEX_DB.SEARCH_SERVICES"]
+    subgraph CSS_BOX[" Search Service "]
         CSS["COMPANY_NAME_SEARCH<br/>────────────────────────<br/>ON: COMPANY_NAME  （自動ベクトル化される列）<br/>MODEL: snowflake-arctic-embed-l-v2.0<br/>TARGET_LAG: 1 hour  （差分自動更新）"]
     end
 
-    subgraph PROC_BOX["Stored Procedure: MATCH_ALL_COMPANIES"]
+    subgraph PROC_BOX[" Stored Procedure "]
         PROC["① SALES_ACTIVITY を ACTIVITY_ID 順に1社ずつ取得<br/>② 社名を JSON 文字列としてエスケープ処理<br/>③ SEARCH_PREVIEW に定数リテラルとして投入<br/>④ 返却 JSON を LATERAL FLATTEN で行展開<br/>⑤ COMPANY_MATCH_RESULT へ INSERT"]
     end
 
-    subgraph RESULT_BOX["SANDBOX_DB.WORK  名寄せ結果"]
+    subgraph RESULT_BOX[" 名寄せ結果 "]
         MR["COMPANY_MATCH_RESULT  18社 × 3候補 = 54行<br/>────────────────────────<br/>ACTIVITY_COMPANY  ← 元の表記揺れ社名<br/>MATCHED_COMPANY   ← マッチした正式社名<br/>RELEVANCE_SCORE   ← cosine_similarity 値<br/>MATCH_RANK        ← 1 = ベストマッチ"]
     end
 
-    subgraph ANA["分析クエリ  STEP 3"]
+    subgraph ANA[" 分析クエリ STEP 3 "]
         direction LR
         A1["ベストマッチ一覧<br/>MATCH_RANK = 1"]
         A2["スコア分布<br/>信頼度の目安"]
