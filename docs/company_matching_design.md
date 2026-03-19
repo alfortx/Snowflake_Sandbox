@@ -1,0 +1,136 @@
+# ベクトル類似度による企業名名寄せ実験
+
+Cortex Search Service を使って、表記揺れのある社名を持つ2テーブルを意味的に紐付ける実験的実装。
+
+---
+
+## 全体フロー図
+
+```mermaid
+%%{init: {"flowchart": {"nodeSpacing": 60, "rankSpacing": 80}}}%%
+flowchart TD
+    subgraph SRC[" ソースデータ "]
+        direction LR
+        SI["SALES_INFO - 正式社名 15件<br/>COMPANY_NAME : ベクトルインデックス対象<br/>COMPANY_CANONICAL : グループ名<br/>AMOUNT / SALES_DATE / PRODUCT"]
+        SA["SALES_ACTIVITY - 表記揺れ社名 18件<br/>COMPANY_NAME : 検索クエリ文字列<br/>ACTIVITY_TYPE / ACTIVITY_DATE<br/>MEMO"]
+    end
+
+    subgraph CSS_BOX[" Search Service "]
+        CSS["COMPANY_NAME_SEARCH<br/>ON: COMPANY_NAME - 自動ベクトル化される列<br/>MODEL: snowflake-arctic-embed-l-v2.0<br/>TARGET_LAG: 1 hour - 差分自動更新"]
+    end
+
+    subgraph PROC_BOX[" Stored Procedure "]
+        PROC["1. SALES_ACTIVITY を1社ずつ取得<br/>2. 社名を JSON 文字列にエスケープ<br/>3. SEARCH_PREVIEW に定数として投入<br/>4. 返却 JSON を LATERAL FLATTEN で展開<br/>5. COMPANY_MATCH_RESULT へ INSERT"]
+    end
+
+    subgraph RESULT_BOX[" 名寄せ結果 "]
+        MR["COMPANY_MATCH_RESULT - 18社 x 3候補 = 54行<br/>ACTIVITY_COMPANY : 元の表記揺れ社名<br/>MATCHED_COMPANY : マッチした正式社名<br/>RELEVANCE_SCORE : cosine_similarity 値<br/>MATCH_RANK : 1 = ベストマッチ"]
+    end
+
+    subgraph ANA[" 分析クエリ STEP 3 "]
+        direction LR
+        A1["ベストマッチ一覧<br/>MATCH_RANK = 1"]
+        A2["スコア分布<br/>信頼度の目安"]
+        A3["売上 × 営業<br/>クロス集計"]
+        A4["非マッチ検出<br/>日立・富士通"]
+    end
+
+    SI -- "② 02_create_search_service.sql: COMPANY_NAME を自動 EMBED してインデックス化" --> CSS
+    SA -- "③ 03_matching_analysis.sql STEP2: CALL MATCH_ALL_COMPANIES" --> PROC
+    PROC -- "SEARCH_PREVIEW: クエリをベクトル化して ANN 検索" --> CSS
+    CSS -- "上位 3件 + cosine_similarity を返却" --> PROC
+    PROC -- "INSERT" --> MR
+    MR --> A1
+    MR --> A2
+    MR --> A3
+    MR --> A4
+
+    style SI fill:#1d4ed8,stroke:#1e3a8a,color:#ffffff
+    style SA fill:#15803d,stroke:#14532d,color:#ffffff
+    style CSS fill:#b45309,stroke:#92400e,color:#ffffff
+    style MR fill:#7c3aed,stroke:#4c1d95,color:#ffffff
+    style PROC fill:#374151,stroke:#111827,color:#ffffff
+```
+
+---
+
+## データフロー
+
+| ステップ | ファイル | やること |
+|---------|---------|---------|
+| ① | `01_setup_tables.sql` | 3テーブルのDDL + サンプルデータINSERT |
+| ② | `02_create_search_service.sql` | SALES_INFO 社名を自動ベクトル化して索引化 |
+| ③ | `03_matching_analysis.sql` STEP1 | 個別クエリで動作確認 |
+| ④ | `03_matching_analysis.sql` STEP2 | SALES_ACTIVITY 全件クエリ → COMPANY_MATCH_RESULT へ保存 |
+| ⑤ | `03_matching_analysis.sql` STEP3 | 紐付き結果でビジネス分析 |
+
+---
+
+## Cortex Search Service のインデックス化の仕組み
+
+```
+SALES_INFO テーブル
+    ↓ CREATE CORTEX SEARCH SERVICE 時
+COMPANY_NAME 列を自動で EMBED（ベクトル化）
+    ↓ 内部ベクトルストアに保存（ユーザーからは見えない）
+    ↓ TARGET_LAG に従って定期的に差分更新
+
+クエリ（SALES_ACTIVITY の COMPANY_NAME）
+    ↓ 同じモデルで EMBED → クエリベクトル生成
+    ↓ ANN（近似最近傍探索）でインデックスを高速サーチ
+結果: relevance_score 付きの候補リスト
+```
+
+### 通常の CROSS JOIN との違い
+
+| 観点 | CROSS JOIN + VECTOR_COSINE_SIMILARITY | Cortex Search Service |
+|------|--------------------------------------|----------------------|
+| ベクトル保存 | 自分でテーブルに保存 | サービス内部に自動管理 |
+| 検索方式 | 全件総当り | ANN インデックス（高速）|
+| スケール | 数百件まで | 数億件まで対応 |
+| 更新 | 手動で再 INSERT | TARGET_LAG で自動差分更新 |
+
+---
+
+## テーブル設計
+
+### SALES_INFO（売上情報）
+
+- `COMPANY_NAME`（`ON` 句）: Search Service がベクトルインデックスを作成する対象列
+- `COMPANY_CANONICAL`: 正規化社名。グループ集計（トヨタグループ全体の売上合計など）に活用
+- `ATTRIBUTES` に指定した列（SALES_ID, AMOUNT, SALES_DATE）: フィルタや返却値として使用可能
+
+### SALES_ACTIVITY（営業活動情報）
+
+- `COMPANY_NAME`: Search Service への検索クエリ文字列として使用
+- Search Service を作成しない（クエリを投げる側）
+
+### COMPANY_MATCH_RESULT（名寄せ結果テーブル）
+
+- 名寄せ実行のたびに INSERT（もしくは MERGE で更新）
+- `MATCH_RANK = 1` がベストマッチ、`2` 以降は次点候補
+- 分析クエリのベーステーブルとなる
+
+---
+
+## 実行手順
+
+```sql
+-- 1. テーブル作成・サンプルデータ投入
+-- experiments/company_matching/01_setup_tables.sql を実行
+
+-- 2. Search Service 作成（数分待機）
+-- experiments/company_matching/02_create_search_service.sql を実行
+-- SHOW CORTEX SEARCH SERVICES で ACTIVE になるまで待つ
+
+-- 3. 名寄せ実行・分析
+-- experiments/company_matching/03_matching_analysis.sql を順番に実行
+```
+
+---
+
+## 注意事項
+
+- `SEARCH_PREVIEW` は SQL 実験用 API → 本番では Python / REST API を推奨
+- `LATERAL FLATTEN` の展開結果は `:results` キー配下を指定すること
+- `FR_CORTEX_ADMIN` ロールが `DEVELOPER_ROLE` に付与済みのため追加権限設定は不要
