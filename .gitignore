@@ -22,6 +22,11 @@ Thumbs.db
 *.swo
 *~
 
+# Python仮想環境
+venv/
+__pycache__/
+*.pyc
+
 # バックアップ
 *.bak
 *.backup
