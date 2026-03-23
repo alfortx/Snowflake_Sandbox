@@ -272,6 +272,49 @@ Terraform が以下のリソースを自動で作成しています。
 
 ---
 
+## STEP 7: Cortex Analyst CLI のセットアップ
+
+Claude Code から自然言語で Snowflake データに質問できる擬似 Intelligence 機能です。
+Snowflake 独自の LLM（Claude 不要）を使うため、リージョン制約を受けません。
+
+### 7-1. Python 仮想環境を作成する
+
+```bash
+# プロジェクトルートで実行
+python3 -m venv venv
+```
+
+### 7-2. 必要なパッケージをインストールする
+
+```bash
+venv/bin/pip install snowflake-connector-python python-dotenv
+```
+
+### 7-3. 動作確認
+
+`terraform apply` 完了・`.env` 設定済みの状態で実行してください。
+
+```bash
+venv/bin/python scripts/cortex_analyst.py \
+  --question "日本の月別感染者数を教えて" \
+  --model COVID19_SEMANTIC \
+  --execute
+```
+
+JSON 形式で `sql` と `results` が返れば成功です。
+
+### 7-4. Claude Code から使う
+
+Claude Code のチャットで以下のように質問します（仮想環境の起動は不要）：
+
+```
+/analyst 2021年に最も感染者が多かった国は？
+```
+
+Claude Code が自動で Cortex Analyst を呼び出し、必要に応じて追加クエリしながら日本語で回答します。
+
+---
+
 ## リソースの削除
 
 **⚠️ 注意: すべてのリソースとデータが削除されます。**
