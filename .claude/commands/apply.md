@@ -14,20 +14,20 @@
    set -a && source .env && set +a
    ```
 
-3. `.terraform/` ディレクトリが存在しない場合のみ初期化する
+3. `terraform/` ディレクトリ内の `.terraform/` が存在しない場合のみ初期化する
    ```
-   terraform init
+   terraform -chdir=terraform init
    ```
 
 4. 実行計画を確認する
    ```
-   terraform plan
+   terraform -chdir=terraform plan
    ```
    - エラーがあれば内容を日本語で説明して中断する
 
 5. ユーザーに `terraform apply` を実行してよいか確認してから実行する
    ```
-   terraform apply
+   terraform -chdir=terraform apply
    ```
    - `yes` の入力が必要なことを事前に伝える
 
