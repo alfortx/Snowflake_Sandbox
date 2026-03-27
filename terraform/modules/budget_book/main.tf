@@ -197,11 +197,29 @@ resource "snowflake_execute" "budget_book_stage_stream" {
   revert  = "DROP STREAM IF EXISTS \"${var.raw_db_name}\".\"${snowflake_schema.budget_book.name}\".\"BUDGET_BOOK_STAGE_STREAM\""
 }
 
+resource "snowflake_execute" "budget_book_file_log" {
+  provider   = snowflake.sysadmin
+  depends_on = [snowflake_schema.budget_book]
+
+  execute = <<-EOT
+    CREATE TABLE IF NOT EXISTS "${var.raw_db_name}"."${snowflake_schema.budget_book.name}"."BUDGET_BOOK_FILE_LOG" (
+      RELATIVE_PATH   STRING        COMMENT 'ステージ内のファイルパス',
+      LAST_MODIFIED   TIMESTAMP_NTZ COMMENT 'ファイルの最終更新日時',
+      FILE_SIZE       NUMBER        COMMENT 'ファイルサイズ（バイト）',
+      METADATA_ACTION STRING        COMMENT 'Streamの変更種別（INSERT / DELETE）',
+      PROCESSED_AT    TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP() COMMENT 'Task処理日時'
+    )
+    COMMENT = 'Directory Streamの消費ログ。Taskがロードしたファイルの履歴を記録する。'
+  EOT
+  revert = "DROP TABLE IF EXISTS \"${var.raw_db_name}\".\"${snowflake_schema.budget_book.name}\".\"BUDGET_BOOK_FILE_LOG\""
+}
+
 resource "snowflake_execute" "load_budget_book_task" {
   provider = snowflake.sysadmin
   depends_on = [
     snowflake_table.transactions_staging,
     snowflake_execute.budget_book_stage_stream,
+    snowflake_execute.budget_book_file_log,
   ]
 
   execute = <<-EOT
@@ -212,6 +230,13 @@ resource "snowflake_execute" "load_budget_book_task" {
       WHEN SYSTEM$STREAM_HAS_DATA('${var.raw_db_name}.${snowflake_schema.budget_book.name}.BUDGET_BOOK_STAGE_STREAM')
     AS
     BEGIN
+      -- Directory Streamを消費する（これがないとhas_dataが常にTRUEになる）
+      INSERT INTO "${var.raw_db_name}"."${snowflake_schema.budget_book.name}"."BUDGET_BOOK_FILE_LOG" (
+        RELATIVE_PATH, LAST_MODIFIED, FILE_SIZE, METADATA_ACTION
+      )
+      SELECT RELATIVE_PATH, LAST_MODIFIED::TIMESTAMP_NTZ, SIZE, "METADATA$ACTION"
+      FROM "${var.raw_db_name}"."${snowflake_schema.budget_book.name}"."BUDGET_BOOK_STAGE_STREAM";
+
       TRUNCATE TABLE "${var.raw_db_name}"."${snowflake_schema.budget_book.name}"."${snowflake_table.transactions_staging.name}";
 
       COPY INTO "${var.raw_db_name}"."${snowflake_schema.budget_book.name}"."${snowflake_table.transactions_staging.name}" (
