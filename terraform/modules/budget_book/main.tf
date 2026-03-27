@@ -234,7 +234,7 @@ resource "snowflake_execute" "load_budget_book_task" {
       INSERT INTO "${var.raw_db_name}"."${snowflake_schema.budget_book.name}"."BUDGET_BOOK_FILE_LOG" (
         RELATIVE_PATH, LAST_MODIFIED, FILE_SIZE, METADATA_ACTION
       )
-      SELECT RELATIVE_PATH, LAST_MODIFIED, SIZE, METADATA$$ACTION
+      SELECT RELATIVE_PATH, LAST_MODIFIED::TIMESTAMP_NTZ, SIZE, "METADATA$ACTION"
       FROM "${var.raw_db_name}"."${snowflake_schema.budget_book.name}"."BUDGET_BOOK_STAGE_STREAM";
 
       TRUNCATE TABLE "${var.raw_db_name}"."${snowflake_schema.budget_book.name}"."${snowflake_table.transactions_staging.name}";
