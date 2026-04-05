@@ -35,6 +35,14 @@
 | S3パス | `s3://snowflake-sandbox-external-data/company-matching/edinet/` |
 | ファイルフォーマット | `EDINET_CSV_FORMAT`（SHIFT_JIS, skip_header=2） |
 
+### サンプルデータ（実データより抜粋）
+
+| EDINET_CODE | SUBMITTER_TYPE | LISTING_STATUS | CONSOLIDATED | CAPITAL | FISCAL_YEAR_END | COMPANY_NAME_JA | COMPANY_NAME_EN | COMPANY_NAME_KANA | ADDRESS | INDUSTRY | SECURITIES_CODE | CORPORATE_NUMBER |
+|------------|---------------|---------------|-------------|---------|----------------|----------------|----------------|------------------|---------|---------|----------------|----------------|
+| E00004 | 内国法人・組合 | 上場 | 有 | 1491 | 5月31日 | カネコ種苗株式会社 | KANEKO SEEDS CO., LTD. | カネコシュビョウカブシキガイシャ | 前橋市古市町一丁目５０番地１２ | 水産・農林業 | 13760 | 5070001000715 |
+| E00006 | 内国法人・組合 | 上場 | 有 | 13500 | 5月31日 | 株式会社　サカタのタネ | SAKATA SEED CORPORATION | カブシキガイシャ　サカタノタネ | 横浜市都筑区仲町台２－７－１ | 水産・農林業 | 13770 | 6020001008662 |
+| E00007 | 内国法人・組合 | 上場 | 有 | 100 | 3月31日 | ユキグニファクトリー株式会社 | YUKIGUNI FACTORY CO.,LTD. | ユニグニファクトリーカブシキガイシャ | 南魚沼市余川８９番地 | 水産・農林業 | 13750 | 1010001185037 |
+
 ### カラム定義
 
 | # | カラム名 | 型 | 内容 |
@@ -83,6 +91,14 @@ python3 experiments/company_matching/convert_jpx.py
 | S3パス | `s3://snowflake-sandbox-external-data/company-matching/jpx/` |
 | ファイルフォーマット | `JPX_CSV_FORMAT`（UTF-8, skip_header=1） |
 
+### サンプルデータ（実データより抜粋）
+
+| LISTED_DATE | SECURITIES_CODE | COMPANY_NAME | MARKET | INDUSTRY_33_CODE | INDUSTRY_33 | INDUSTRY_17_CODE | INDUSTRY_17 | SIZE_CODE | SIZE_NAME |
+|------------|----------------|-------------|--------|-----------------|------------|-----------------|------------|----------|----------|
+| 20260228 | 1301 | 極洋 | プライム（内国株式） | 50 | 水産・農林業 | 1 | 食品 | 6 | TOPIX Small 1 |
+| 20260228 | 1305 | ｉＦｒｅｅＥＴＦ　ＴＯＰＩＸ（年１回決算型） | ETF・ETN | - | - | - | - | - | - |
+| 20260228 | 1306 | ＮＥＸＴ　ＦＵＮＤＳ　ＴＯＰＩＸ連動型上場投信 | ETF・ETN | - | - | - | - | - | - |
+
 ### カラム定義
 
 | # | カラム名 | 型 | 内容 |
@@ -120,6 +136,14 @@ python3 experiments/company_matching/convert_jpx.py
 | テーブル種別 | External Table |
 | S3パス | `s3://snowflake-sandbox-external-data/company-matching/nta/` |
 | ファイルフォーマット | `NTA_CSV_FORMAT`（SHIFT_JIS, skip_header=0） |
+
+### サンプルデータ（実データより抜粋 — 青森県）
+
+| SEQ_NO | CORPORATE_NUMBER | PROCESS | CORRECT | UPDATE_DATE | CHANGE_DATE | COMPANY_NAME | COMPANY_NAME_KANA | COMPANY_TYPE | PREFECTURE | MUNICIPALITY | ADDRESS1 | ... | COMPANY_NAME_EN | PREFECTURE_EN |
+|--------|----------------|---------|---------|------------|------------|-------------|-----------------|-------------|-----------|------------|---------|-----|----------------|--------------|
+| 1 | 1000012160145 | 01 | 1 | 2018-04-02 | 2015-10-05 | 弘前検察審査会 | ヒロサキケンサツシンサカイ | 101 | 青森県 | 弘前市 | 大字下白銀町７ | ... | Hirosaki Committee for the Inquest of Prosecution | Aomori |
+| 2 | 1000013050378 | 01 | 1 | 2018-04-02 | 2015-10-05 | 鰺ヶ沢簡易裁判所 | アジガサワカンイサイバンショ | 101 | 青森県 | 西津軽郡鰺ヶ沢町 | 大字米町３８ | ... | Ajigasawa Summary Court | Aomori |
+| 3 | 1000020022080 | 01 | 1 | 2020-09-02 | 2015-10-05 | むつ市 | ムツシ | 201 | 青森県 | むつ市 | 中央１丁目８－１ | ... | Mutsu City | Aomori |
 
 ### カラム定義
 
