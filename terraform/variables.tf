@@ -292,3 +292,31 @@ variable "budget_book_agent_name" {
   type        = string
   default     = "BUDGET_BOOK_AGENT"
 }
+
+# =============================================================================
+# 企業名名寄せ実験変数
+# =============================================================================
+
+variable "company_matching_schema_name" {
+  description = "企業名名寄せ実験用スキーマ名（RAW_DB 配下）"
+  type        = string
+  default     = "COMPANY_MATCHING"
+}
+
+variable "ext_edinet_table_name" {
+  description = "EDINETコードリスト外部テーブル名"
+  type        = string
+  default     = "EXT_EDINET_COMPANIES"
+}
+
+variable "ext_jpx_table_name" {
+  description = "JPX上場銘柄一覧外部テーブル名"
+  type        = string
+  default     = "EXT_JPX_COMPANIES"
+}
+
+variable "ext_nta_table_name" {
+  description = "国税庁法人番号公表データ外部テーブル名"
+  type        = string
+  default     = "EXT_NTA_COMPANIES"
+}

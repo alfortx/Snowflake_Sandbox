@@ -82,6 +82,16 @@ resource "aws_iam_role_policy_attachment" "snowflake_s3_attach" {
   policy_arn = aws_iam_policy.snowflake_s3_access.arn
 }
 
+resource "snowflake_grant_privileges_to_account_role" "sysadmin_usage_on_integration" {
+  provider  = snowflake.accountadmin
+  account_role_name = "SYSADMIN"
+  privileges = ["USAGE"]
+  on_account_object {
+    object_type = "INTEGRATION"
+    object_name = snowflake_storage_integration.s3.name
+  }
+}
+
 resource "snowflake_stage" "external_s3" {
   provider = snowflake.sysadmin
 
@@ -91,4 +101,6 @@ resource "snowflake_stage" "external_s3" {
   schema              = var.work_schema_name
   storage_integration = snowflake_storage_integration.s3.name
   comment             = "S3外部データ用ステージ（Storage Integration経由）"
+
+  depends_on = [snowflake_grant_privileges_to_account_role.sysadmin_usage_on_integration]
 }

@@ -110,6 +110,23 @@ module "budget_book" {
   fr_cortex_use_role_name         = var.fr_cortex_use_role_name
 }
 
+module "company_matching" {
+  source = "./modules/company_matching"
+
+  providers = {
+    snowflake.sysadmin = snowflake.sysadmin
+  }
+
+  raw_db_name                  = module.covid19.raw_db_name
+  company_matching_schema_name = var.company_matching_schema_name
+  storage_integration_name     = var.storage_integration_name
+  s3_bucket_name               = var.s3_bucket_name
+  sandbox_wh_name              = module.foundation.sandbox_wh_name
+  ext_edinet_table_name        = var.ext_edinet_table_name
+  ext_jpx_table_name           = var.ext_jpx_table_name
+  ext_nta_table_name           = var.ext_nta_table_name
+}
+
 module "managed_access" {
   source = "./modules/managed_access"
 
