@@ -110,6 +110,21 @@ module "budget_book" {
   fr_cortex_use_role_name         = var.fr_cortex_use_role_name
 }
 
+module "cortex_mcp" {
+  source = "./modules/cortex_mcp"
+
+  providers = {
+    snowflake.sysadmin = snowflake.sysadmin
+  }
+
+  cortex_db_name                 = module.cortex.cortex_db_name
+  semantic_models_schema_name    = module.cortex.semantic_models_schema_name
+  mcp_server_name                = var.mcp_server_name
+  covid19_semantic_view_name     = var.semantic_view_name
+  budget_book_semantic_view_name = var.budget_book_semantic_view_name
+  developer_role_name            = var.fr_cortex_use_role_name
+}
+
 module "managed_access" {
   source = "./modules/managed_access"
 

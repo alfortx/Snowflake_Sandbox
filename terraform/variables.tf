@@ -281,6 +281,12 @@ variable "budget_book_semantic_view_name" {
   default     = "BUDGET_BOOK_SEMANTIC"
 }
 
+variable "mcp_server_name" {
+  description = "Cortex Analyst MCP Server名"
+  type        = string
+  default     = "ANALYST_MCP"
+}
+
 variable "budget_book_search_service_name" {
   description = "家計簿用Cortex Searchサービス名"
   type        = string

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "snowflake-analyst": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["scripts/mcp_snowflake.sh"]
+    }
+  }
+}
