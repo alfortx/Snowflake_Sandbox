@@ -88,3 +88,16 @@ resource "snowflake_grant_account_role" "viewer_inherits_cortex_use" {
   role_name        = snowflake_account_role.fr_cortex_use.name
   parent_role_name = var.viewer_role_name
 }
+
+# --- DEVELOPER_DB ---
+resource "snowflake_grant_account_role" "developer_inherits_developer_db_write" {
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_developer_db_write.name
+  parent_role_name = var.developer_role_name
+}
+
+resource "snowflake_grant_account_role" "viewer_inherits_developer_db_read" {
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_developer_db_read.name
+  parent_role_name = var.viewer_role_name
+}

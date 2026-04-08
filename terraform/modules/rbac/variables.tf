@@ -69,3 +69,12 @@ variable "fr_budget_book_read_role_name" { type = string }
 variable "fr_cortex_admin_role_name" { type = string }
 variable "fr_cortex_use_role_name" { type = string }
 variable "fr_managed_access_test_role_name" { type = string }
+
+# =============================================================================
+# developer モジュール出力
+# =============================================================================
+variable "developer_db_name" { type = string }
+variable "developer_work_schema_name" { type = string }
+
+variable "fr_developer_db_write_role_name" { type = string }
+variable "fr_developer_db_read_role_name" { type = string }

@@ -244,6 +244,34 @@ variable "fr_managed_access_test_role_name" {
 }
 
 # =============================================================================
+# DEVELOPER_DB 変数
+# =============================================================================
+
+variable "developer_db_name" {
+  description = "開発者作業用データベース名"
+  type        = string
+  default     = "DEVELOPER_DB"
+}
+
+variable "developer_work_schema_name" {
+  description = "DEVELOPER_DB の作業用スキーマ名"
+  type        = string
+  default     = "WORK"
+}
+
+variable "fr_developer_db_write_role_name" {
+  description = "DEVELOPER_DB.WORK への読み書き権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_DEVELOPER_DB_WRITE"
+}
+
+variable "fr_developer_db_read_role_name" {
+  description = "DEVELOPER_DB.WORK への読み取り権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_DEVELOPER_DB_READ"
+}
+
+# =============================================================================
 # Snowflake Intelligence / Cortex Agent 変数
 # =============================================================================
 

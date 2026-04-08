@@ -127,6 +127,17 @@ module "company_matching" {
   ext_nta_table_name           = var.ext_nta_table_name
 }
 
+module "developer" {
+  source = "./modules/developer"
+
+  providers = {
+    snowflake.sysadmin = snowflake.sysadmin
+  }
+
+  developer_db_name          = var.developer_db_name
+  developer_work_schema_name = var.developer_work_schema_name
+}
+
 module "managed_access" {
   source = "./modules/managed_access"
 
@@ -193,6 +204,10 @@ module "rbac" {
   managed_schema_name    = module.managed_access.managed_schema_name
   schema_owner_role_name = module.managed_access.schema_owner_role_name
 
+  # developer
+  developer_db_name          = module.developer.developer_db_name
+  developer_work_schema_name = module.developer.developer_work_schema_name
+
   # FR_* role name variables
   fr_wh_sandbox_operate_role_name  = var.fr_wh_sandbox_operate_role_name
   fr_wh_sandbox_use_role_name      = var.fr_wh_sandbox_use_role_name
@@ -207,4 +222,6 @@ module "rbac" {
   fr_cortex_admin_role_name        = var.fr_cortex_admin_role_name
   fr_cortex_use_role_name          = var.fr_cortex_use_role_name
   fr_managed_access_test_role_name = var.fr_managed_access_test_role_name
+  fr_developer_db_write_role_name  = var.fr_developer_db_write_role_name
+  fr_developer_db_read_role_name   = var.fr_developer_db_read_role_name
 }
