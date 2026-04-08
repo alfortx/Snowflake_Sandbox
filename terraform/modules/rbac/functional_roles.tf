@@ -753,3 +753,99 @@ resource "snowflake_grant_privileges_to_account_role" "fr_managed_access_test_sc
     schema_name = "\"${var.managed_access_db_name}\".\"${var.managed_schema_name}\""
   }
 }
+
+# =============================================================================
+# DEVELOPER_DB 用 FR_* ロール
+# =============================================================================
+
+# ① ロール作成
+resource "snowflake_account_role" "fr_developer_db_write" {
+  provider = snowflake.securityadmin
+  name     = var.fr_developer_db_write_role_name
+  comment  = "DEVELOPER_DB.WORK への読み書き権限"
+}
+
+resource "snowflake_account_role" "fr_developer_db_read" {
+  provider = snowflake.securityadmin
+  name     = var.fr_developer_db_read_role_name
+  comment  = "DEVELOPER_DB.WORK への読み取り権限"
+}
+
+# ② SYSADMIN 継承
+resource "snowflake_grant_account_role" "fr_developer_db_write_to_sysadmin" {
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_developer_db_write.name
+  parent_role_name = "SYSADMIN"
+}
+
+resource "snowflake_grant_account_role" "fr_developer_db_read_to_sysadmin" {
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_developer_db_read.name
+  parent_role_name = "SYSADMIN"
+}
+
+# ③ オブジェクト権限付与
+
+# --- FR_DEVELOPER_DB_WRITE ---
+resource "snowflake_grant_privileges_to_account_role" "fr_developer_db_write_db" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_developer_db_write.name
+  privileges        = ["USAGE"]
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = var.developer_db_name
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_developer_db_write_schema" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_developer_db_write.name
+  privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW", "CREATE PROCEDURE"]
+  on_schema {
+    schema_name = "\"${var.developer_db_name}\".\"${var.developer_work_schema_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_developer_db_write_future_tables" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_developer_db_write.name
+  privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE"]
+  on_schema_object {
+    future {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${var.developer_db_name}\".\"${var.developer_work_schema_name}\""
+    }
+  }
+}
+
+# --- FR_DEVELOPER_DB_READ ---
+resource "snowflake_grant_privileges_to_account_role" "fr_developer_db_read_db" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_developer_db_read.name
+  privileges        = ["USAGE"]
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = var.developer_db_name
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_developer_db_read_schema" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_developer_db_read.name
+  privileges        = ["USAGE"]
+  on_schema {
+    schema_name = "\"${var.developer_db_name}\".\"${var.developer_work_schema_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_developer_db_read_future_tables" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_developer_db_read.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    future {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${var.developer_db_name}\".\"${var.developer_work_schema_name}\""
+    }
+  }
+}
