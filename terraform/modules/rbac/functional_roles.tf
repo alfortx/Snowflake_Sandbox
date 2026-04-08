@@ -33,7 +33,7 @@ resource "snowflake_account_role" "fr_wh_mv_use" {
 resource "snowflake_account_role" "fr_sandbox_work_write" {
   provider = snowflake.securityadmin
   name     = var.fr_sandbox_work_write_role_name
-  comment  = "SANDBOX_DB.WORK への読み書き権限（EXTERNAL_S3_STAGE 含む）"
+  comment  = "SANDBOX_DB.WORK への読み書き権限"
 }
 
 resource "snowflake_account_role" "fr_sandbox_work_read" {
@@ -261,16 +261,6 @@ resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_write_fut
       object_type_plural = "TABLES"
       in_schema          = "\"${var.sandbox_db_name}\".\"${var.work_schema_name}\""
     }
-  }
-}
-
-resource "snowflake_grant_privileges_to_account_role" "fr_sandbox_work_write_stage" {
-  provider          = snowflake.securityadmin
-  account_role_name = snowflake_account_role.fr_sandbox_work_write.name
-  privileges        = ["USAGE"]
-  on_schema_object {
-    object_type = "STAGE"
-    object_name = "\"${var.external_s3_stage_database}\".\"${var.external_s3_stage_schema}\".\"${var.external_s3_stage_name}\""
   }
 }
 

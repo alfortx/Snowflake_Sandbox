@@ -4,7 +4,7 @@
 # 各モジュールの役割:
 #   foundation      - SANDBOX_DB / SANDBOX_WH / DEVELOPER_ROLE / sandbox_user
 #   cortex          - CORTEX_DB / スキーマ群 / アカウントパラメータ
-#   aws_integration - S3 / IAM / Storage Integration / External Stage
+#   aws_integration - S3 / IAM / Storage Integration
 #   covid19         - RAW_DB / COVID19 スキーマ / 外部テーブル / MV / Agent
 #   budget_book     - BUDGET_BOOK スキーマ / TRANSACTIONS / Agent
 #   rbac            - FR_* ロール 13個 + 全権限付与
@@ -66,9 +66,6 @@ module "aws_integration" {
   s3_bucket_name           = var.s3_bucket_name
   iam_role_name            = var.iam_role_name
   storage_integration_name = var.storage_integration_name
-  stage_name               = var.stage_name
-  sandbox_db_name          = module.foundation.sandbox_db_name
-  work_schema_name         = module.foundation.work_schema_name
 }
 
 module "covid19" {
@@ -181,11 +178,6 @@ module "rbac" {
   work_schema_name    = module.foundation.work_schema_name
   developer_role_name = module.foundation.developer_role_name
   viewer_role_name    = module.foundation.viewer_role_name
-
-  # aws_integration
-  external_s3_stage_database = module.aws_integration.external_s3_stage_database
-  external_s3_stage_schema   = module.aws_integration.external_s3_stage_schema
-  external_s3_stage_name     = module.aws_integration.external_s3_stage_name
 
   # covid19
   mv_wh_name                       = module.covid19.mv_wh_name

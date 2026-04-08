@@ -1,5 +1,5 @@
 # =============================================================================
-# aws_integration モジュール: S3 / IAM / Storage Integration / External Stage
+# aws_integration モジュール: S3 / IAM / Storage Integration
 # =============================================================================
 
 data "aws_caller_identity" "current" {}
@@ -92,15 +92,3 @@ resource "snowflake_grant_privileges_to_account_role" "sysadmin_usage_on_integra
   }
 }
 
-resource "snowflake_stage" "external_s3" {
-  provider = snowflake.sysadmin
-
-  name                = var.stage_name
-  url                 = "s3://${aws_s3_bucket.external_table_data.bucket}/"
-  database            = var.sandbox_db_name
-  schema              = var.work_schema_name
-  storage_integration = snowflake_storage_integration.s3.name
-  comment             = "S3外部データ用ステージ（Storage Integration経由）"
-
-  depends_on = [snowflake_grant_privileges_to_account_role.sysadmin_usage_on_integration]
-}

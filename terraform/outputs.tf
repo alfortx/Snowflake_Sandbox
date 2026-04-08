@@ -84,25 +84,6 @@ output "s3_bucket_arn" {
   value       = module.aws_integration.s3_bucket_arn
 }
 
-output "external_stage_name" {
-  description = "外部ステージの完全修飾名"
-  value       = "${module.aws_integration.external_s3_stage_database}.${module.aws_integration.external_s3_stage_schema}.${module.aws_integration.external_s3_stage_name}"
-}
-
-output "external_stage_usage" {
-  description = "外部ステージの動作確認用SQL"
-  value       = <<-EOT
-    ─── 外部ステージ 動作確認手順 ───
-
-    USE ROLE ${module.foundation.developer_role_name};
-    USE DATABASE ${module.foundation.sandbox_db_name};
-    USE SCHEMA ${module.foundation.work_schema_name};
-    USE WAREHOUSE ${module.foundation.sandbox_wh_name};
-
-    LIST @${module.aws_integration.external_s3_stage_name};
-  EOT
-}
-
 output "covid19_stage_name" {
   description = "COVID-19 外部ステージの完全修飾名"
   value       = "${module.covid19.raw_db_name}.${module.covid19.covid19_schema_name}.${module.covid19.covid19_s3_stage_name}"
