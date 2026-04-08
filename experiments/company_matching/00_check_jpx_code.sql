@@ -1,0 +1,60 @@
+-- JPX SECURITIES_CODE の型変換確認
+-- 現状: 浮動小数点文字列（例: '1301.0'）→ 4桁整数文字列（例: '1301'）に変換
+-- 注意: ETF等に '130A' のような英字混じりコードあり
+
+-- ① 変換前後の比較（サンプル10件）
+SELECT
+  SECURITIES_CODE                                        AS raw_code,
+  TRY_TO_NUMBER(SECURITIES_CODE)                        AS code_num,
+  TO_CHAR(TRY_TO_NUMBER(SECURITIES_CODE))               AS code_str,
+  COMPANY_NAME
+FROM RAW_DB.COMPANY_MATCHING.MV_JPX_COMPANIES
+LIMIT 10;
+
+-- ② 英字混じりコードの確認（変換できなかった件数）
+SELECT
+  COUNT(*)                                                                  AS total,
+  COUNT(DISTINCT SECURITIES_CODE)                                           AS distinct_raw,
+  SUM(CASE WHEN TRY_TO_NUMBER(SECURITIES_CODE) IS NULL THEN 1 ELSE 0 END)  AS non_numeric_count,
+  SUM(CASE WHEN TRY_TO_NUMBER(SECURITIES_CODE) IS NOT NULL THEN 1 ELSE 0 END) AS numeric_count
+FROM RAW_DB.COMPANY_MATCHING.MV_JPX_COMPANIES;
+
+-- ③ 英字混じりコードのサンプル
+SELECT DISTINCT SECURITIES_CODE, COMPANY_NAME, MARKET
+FROM RAW_DB.COMPANY_MATCHING.MV_JPX_COMPANIES
+WHERE TRY_TO_NUMBER(SECURITIES_CODE) IS NULL
+LIMIT 10;
+
+-- ④ EDINETとのSECURITIES_CODEマッチ確認（変換後）
+-- EDINET: 5桁 '13760' → 先頭4桁 '1376' に変換して突合
+SELECT
+  COUNT(DISTINCT jpx_code) AS jpx_matched,
+  COUNT(DISTINCT edinet_4digit) AS edinet_matched
+FROM (
+  SELECT
+    TO_CHAR(TRY_TO_NUMBER(j.SECURITIES_CODE)) AS jpx_code,
+    LEFT(e.SECURITIES_CODE, 4)                AS edinet_4digit
+  FROM RAW_DB.COMPANY_MATCHING.MV_JPX_COMPANIES j
+  JOIN RAW_DB.COMPANY_MATCHING.MV_EDINET_COMPANIES e
+    ON TO_CHAR(TRY_TO_NUMBER(j.SECURITIES_CODE)) = LEFT(e.SECURITIES_CODE, 4)
+  WHERE e.SECURITIES_CODE IS NOT NULL
+    AND e.SECURITIES_CODE != ''
+    AND TRY_TO_NUMBER(j.SECURITIES_CODE) IS NOT NULL
+) matched;
+
+-- ⑤ マッチした企業のサンプル10件
+SELECT
+  e.EDINET_CODE,
+  e.SECURITIES_CODE                              AS edinet_code_raw,
+  LEFT(e.SECURITIES_CODE, 4)                     AS edinet_4digit,
+  TO_CHAR(TRY_TO_NUMBER(j.SECURITIES_CODE))      AS jpx_code_str,
+  e.COMPANY_NAME_JA                              AS edinet_name,
+  j.COMPANY_NAME                                 AS jpx_name,
+  j.MARKET
+FROM RAW_DB.COMPANY_MATCHING.MV_EDINET_COMPANIES e
+JOIN RAW_DB.COMPANY_MATCHING.MV_JPX_COMPANIES j
+  ON LEFT(e.SECURITIES_CODE, 4) = TO_CHAR(TRY_TO_NUMBER(j.SECURITIES_CODE))
+WHERE e.SECURITIES_CODE IS NOT NULL
+  AND e.SECURITIES_CODE != ''
+  AND TRY_TO_NUMBER(j.SECURITIES_CODE) IS NOT NULL
+LIMIT 10;
