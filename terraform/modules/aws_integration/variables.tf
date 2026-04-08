@@ -14,14 +14,3 @@ variable "storage_integration_name" {
   type = string
 }
 
-variable "stage_name" {
-  type = string
-}
-
-variable "sandbox_db_name" {
-  type = string
-}
-
-variable "work_schema_name" {
-  type = string
-}

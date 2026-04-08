@@ -8,13 +8,6 @@ variable "developer_role_name" { type = string }
 variable "viewer_role_name" { type = string }
 
 # =============================================================================
-# aws_integration モジュール出力
-# =============================================================================
-variable "external_s3_stage_database" { type = string }
-variable "external_s3_stage_schema" { type = string }
-variable "external_s3_stage_name" { type = string }
-
-# =============================================================================
 # covid19 モジュール出力
 # =============================================================================
 variable "mv_wh_name" { type = string }

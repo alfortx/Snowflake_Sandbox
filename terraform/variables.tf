@@ -127,11 +127,6 @@ variable "storage_integration_name" {
   default     = "SANDBOX_S3_INTEGRATION"
 }
 
-variable "stage_name" {
-  description = "外部ステージ名（S3を参照するSnowflakeのステージオブジェクト）"
-  type        = string
-  default     = "EXTERNAL_S3_STAGE"
-}
 
 # =============================================================================
 # Cortex リソース変数
