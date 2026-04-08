@@ -9,6 +9,7 @@
 #   budget_book     - BUDGET_BOOK スキーマ / TRANSACTIONS / Agent
 #   rbac            - FR_* ロール 13個 + 全権限付与
 #   managed_access  - MANAGED_ACCESS_DB / SCHEMA_OWNER_ROLE
+#   config          - CONFIG_DB / セッションポリシー（セカンダリロール無効化）
 # =============================================================================
 
 module "foundation" {
@@ -151,6 +152,19 @@ module "managed_access" {
   managed_schema_name    = var.managed_schema_name
   sandbox_user_name      = module.foundation.sandbox_user_name
   sandbox_wh_name        = module.foundation.sandbox_wh_name
+}
+
+module "config" {
+  source = "./modules/config"
+
+  providers = {
+    snowflake.sysadmin     = snowflake.sysadmin
+    snowflake.accountadmin = snowflake.accountadmin
+  }
+
+  database_name           = var.config_db_name
+  session_policies_schema = var.config_session_policies_schema
+  session_policy_name     = var.config_session_policy_name
 }
 
 module "rbac" {

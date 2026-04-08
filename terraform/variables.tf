@@ -348,3 +348,25 @@ variable "ext_nta_table_name" {
   type        = string
   default     = "EXT_NTA_COMPANIES"
 }
+
+# =============================================================================
+# CONFIG_DB 変数（設定・統合系リソース用）
+# =============================================================================
+
+variable "config_db_name" {
+  description = "設定・統合系リソース用データベース名（セッションポリシー、ネットワークポリシー等を格納）"
+  type        = string
+  default     = "CONFIG_DB"
+}
+
+variable "config_session_policies_schema" {
+  description = "CONFIG_DB 内のセッションポリシー用スキーマ名"
+  type        = string
+  default     = "SESSION_POLICIES"
+}
+
+variable "config_session_policy_name" {
+  description = "セカンダリロール無効化セッションポリシー名"
+  type        = string
+  default     = "BLOCK_SECONDARY_ROLES"
+}
