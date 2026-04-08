@@ -1,0 +1,27 @@
+-- =============================================================================
+-- STEP 1 確認用: EDINET_JPX_GROUND_TRUTH の SELECT 部分
+-- CTAS 実行前に件数・内容が想定通りか確認する
+-- =============================================================================
+
+-- ① 件数確認（上場銘柄で EDINET と証券コードが紐付く件数）
+SELECT COUNT(*) AS ground_truth_count
+FROM RAW_DB.COMPANY_MATCHING.MV_JPX_COMPANIES j
+INNER JOIN RAW_DB.COMPANY_MATCHING.MV_EDINET_COMPANIES e
+    ON LPAD(j.SECURITIES_CODE::VARCHAR, 4, '0') = LPAD(e.SECURITIES_CODE::VARCHAR, 4, '0')
+WHERE j.SECURITIES_CODE IS NOT NULL
+  AND j.SECURITIES_CODE != '-';
+
+-- ② サンプル確認（社名の表記差異を目視確認）
+SELECT
+    j.SECURITIES_CODE,
+    j.COMPANY_NAME       AS JPX_NAME,
+    e.COMPANY_NAME_JA    AS EDINET_NAME,
+    e.EDINET_CODE,
+    e.CORPORATE_NUMBER,
+    j.INDUSTRY_33        AS JPX_INDUSTRY
+FROM RAW_DB.COMPANY_MATCHING.MV_JPX_COMPANIES j
+INNER JOIN RAW_DB.COMPANY_MATCHING.MV_EDINET_COMPANIES e
+    ON LPAD(j.SECURITIES_CODE::VARCHAR, 4, '0') = LPAD(e.SECURITIES_CODE::VARCHAR, 4, '0')
+WHERE j.SECURITIES_CODE IS NOT NULL
+  AND j.SECURITIES_CODE != '-'
+LIMIT 20;

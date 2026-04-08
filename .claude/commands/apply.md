@@ -25,11 +25,10 @@
    ```
    - エラーがあれば内容を日本語で説明して中断する
 
-5. ユーザーに `terraform apply` を実行してよいか確認してから実行する
+5. ユーザーに apply を実行してよいか確認してから実行する
    ```
-   terraform -chdir=terraform apply
+   terraform -chdir=terraform apply -auto-approve
    ```
-   - `yes` の入力が必要なことを事前に伝える
 
 6. 完了後、以下を報告する
    - 作成されたリソース数
