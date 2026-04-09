@@ -9,28 +9,23 @@
 
 ## 実行手順
 
-2. 環境変数を読み込む
-   ```
-   set -a && source .env && set +a
-   ```
-
-3. `terraform/` ディレクトリ内の `.terraform/` が存在しない場合のみ初期化する
+2. `terraform/` ディレクトリ内の `.terraform/` が存在しない場合のみ初期化する
    ```
    terraform -chdir=terraform init
    ```
 
-4. 実行計画を確認する
+3. 実行計画を確認する
    ```
-   terraform -chdir=terraform plan
+   bash scripts/tf-plan.sh
    ```
    - エラーがあれば内容を日本語で説明して中断する
 
-5. ユーザーに apply を実行してよいか確認してから実行する
+4. plan にエラーがなければ、確認なしで apply を実行する
    ```
-   terraform -chdir=terraform apply -auto-approve
+   bash scripts/tf-apply.sh
    ```
 
-6. 完了後、以下を報告する
+5. 完了後、以下を報告する
    - 作成されたリソース数
    - `terraform output` の結果（Snowflake接続情報など）
    - 次のステップ（README の STEP 5 / STEP 6）への案内
