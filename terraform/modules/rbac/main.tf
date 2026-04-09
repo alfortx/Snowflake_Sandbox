@@ -101,3 +101,16 @@ resource "snowflake_grant_account_role" "viewer_inherits_developer_db_read" {
   role_name        = snowflake_account_role.fr_developer_db_read.name
   parent_role_name = var.viewer_role_name
 }
+
+# --- COMPANY_MATCHING ---
+resource "snowflake_grant_account_role" "developer_inherits_raw_company_matching_write" {
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_raw_company_matching_write.name
+  parent_role_name = var.developer_role_name
+}
+
+resource "snowflake_grant_account_role" "viewer_inherits_raw_company_matching_read" {
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_raw_company_matching_read.name
+  parent_role_name = var.viewer_role_name
+}
