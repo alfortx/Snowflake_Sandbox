@@ -21,6 +21,20 @@ variable "mv_jhu_timeseries_name" { type = string }
 variable "mv_covid19_world_testing_name" { type = string }
 
 # =============================================================================
+# company_matching モジュール出力
+# =============================================================================
+variable "company_matching_schema_name" { type = string }
+variable "edinet_s3_stage_name" { type = string }
+variable "jpx_s3_stage_name" { type = string }
+variable "nta_s3_stage_name" { type = string }
+variable "ext_edinet_table_name" { type = string }
+variable "ext_jpx_table_name" { type = string }
+variable "ext_nta_table_name" { type = string }
+variable "mv_edinet_companies_name" { type = string }
+variable "mv_jpx_companies_name" { type = string }
+variable "mv_nta_companies_name" { type = string }
+
+# =============================================================================
 # budget_book モジュール出力
 # =============================================================================
 variable "budget_book_schema_name" { type = string }
@@ -59,6 +73,8 @@ variable "fr_raw_covid19_write_role_name" { type = string }
 variable "fr_raw_covid19_read_role_name" { type = string }
 variable "fr_budget_book_write_role_name" { type = string }
 variable "fr_budget_book_read_role_name" { type = string }
+variable "fr_raw_company_matching_write_role_name" { type = string }
+variable "fr_raw_company_matching_read_role_name" { type = string }
 variable "fr_cortex_admin_role_name" { type = string }
 variable "fr_cortex_use_role_name" { type = string }
 variable "fr_managed_access_test_role_name" { type = string }

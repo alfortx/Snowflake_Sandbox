@@ -344,6 +344,18 @@ variable "ext_nta_table_name" {
   default     = "EXT_NTA_COMPANIES"
 }
 
+variable "fr_raw_company_matching_write_role_name" {
+  description = "RAW_DB.COMPANY_MATCHING への読み書き機能的ロール名"
+  type        = string
+  default     = "FR_RAW_COMPANY_MATCHING_WRITE"
+}
+
+variable "fr_raw_company_matching_read_role_name" {
+  description = "RAW_DB.COMPANY_MATCHING への読み取り機能的ロール名"
+  type        = string
+  default     = "FR_RAW_COMPANY_MATCHING_READ"
+}
+
 # =============================================================================
 # CONFIG_DB 変数（設定・統合系リソース用）
 # =============================================================================
