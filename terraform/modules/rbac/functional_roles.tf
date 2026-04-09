@@ -839,3 +839,277 @@ resource "snowflake_grant_privileges_to_account_role" "fr_developer_db_read_futu
     }
   }
 }
+
+# =============================================================================
+# COMPANY_MATCHING 用 FR_* ロール
+# =============================================================================
+
+# ① ロール作成
+resource "snowflake_account_role" "fr_raw_company_matching_write" {
+  provider = snowflake.securityadmin
+  name     = var.fr_raw_company_matching_write_role_name
+  comment  = "RAW_DB.COMPANY_MATCHING への読み書き権限"
+}
+
+resource "snowflake_account_role" "fr_raw_company_matching_read" {
+  provider = snowflake.securityadmin
+  name     = var.fr_raw_company_matching_read_role_name
+  comment  = "RAW_DB.COMPANY_MATCHING への読み取り権限"
+}
+
+# ② SYSADMIN 継承
+resource "snowflake_grant_account_role" "fr_raw_company_matching_write_to_sysadmin" {
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_raw_company_matching_write.name
+  parent_role_name = "SYSADMIN"
+}
+
+resource "snowflake_grant_account_role" "fr_raw_company_matching_read_to_sysadmin" {
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_raw_company_matching_read.name
+  parent_role_name = "SYSADMIN"
+}
+
+# --- FR_RAW_COMPANY_MATCHING_WRITE ---
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_db" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["USAGE"]
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = var.raw_db_name
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_schema" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW"]
+  on_schema {
+    schema_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_future_tables" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE"]
+  on_schema_object {
+    future {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\""
+    }
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_edinet_stage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["USAGE"]
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.edinet_s3_stage_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_jpx_stage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["USAGE"]
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.jpx_s3_stage_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_nta_stage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["USAGE"]
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.nta_s3_stage_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_ext_edinet" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "EXTERNAL TABLE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.ext_edinet_table_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_ext_jpx" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "EXTERNAL TABLE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.ext_jpx_table_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_ext_nta" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "EXTERNAL TABLE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.ext_nta_table_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_mv_edinet" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "MATERIALIZED VIEW"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.mv_edinet_companies_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_mv_jpx" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "MATERIALIZED VIEW"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.mv_jpx_companies_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_write_mv_nta" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_write.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "MATERIALIZED VIEW"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.mv_nta_companies_name}\""
+  }
+}
+
+# --- FR_RAW_COMPANY_MATCHING_READ ---
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_db" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["USAGE"]
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = var.raw_db_name
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_schema" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["USAGE"]
+  on_schema {
+    schema_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_future_tables" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    future {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\""
+    }
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_edinet_stage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["USAGE"]
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.edinet_s3_stage_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_jpx_stage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["USAGE"]
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.jpx_s3_stage_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_nta_stage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["USAGE"]
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.nta_s3_stage_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_ext_edinet" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "EXTERNAL TABLE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.ext_edinet_table_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_ext_jpx" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "EXTERNAL TABLE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.ext_jpx_table_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_ext_nta" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "EXTERNAL TABLE"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.ext_nta_table_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_mv_edinet" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "MATERIALIZED VIEW"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.mv_edinet_companies_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_mv_jpx" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "MATERIALIZED VIEW"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.mv_jpx_companies_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_read_mv_nta" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_raw_company_matching_read.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    object_type = "MATERIALIZED VIEW"
+    object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.mv_nta_companies_name}\""
+  }
+}

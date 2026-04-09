@@ -190,6 +190,18 @@ module "rbac" {
   mv_jhu_timeseries_name           = module.covid19.mv_jhu_timeseries_name
   mv_covid19_world_testing_name    = module.covid19.mv_covid19_world_testing_name
 
+  # company_matching
+  company_matching_schema_name            = module.company_matching.company_matching_schema_name
+  edinet_s3_stage_name                    = module.company_matching.edinet_s3_stage_name
+  jpx_s3_stage_name                       = module.company_matching.jpx_s3_stage_name
+  nta_s3_stage_name                       = module.company_matching.nta_s3_stage_name
+  ext_edinet_table_name                   = module.company_matching.ext_edinet_table_name
+  ext_jpx_table_name                      = module.company_matching.ext_jpx_table_name
+  ext_nta_table_name                      = module.company_matching.ext_nta_table_name
+  mv_edinet_companies_name                = module.company_matching.mv_edinet_companies_name
+  mv_jpx_companies_name                   = module.company_matching.mv_jpx_companies_name
+  mv_nta_companies_name                   = module.company_matching.mv_nta_companies_name
+
   # budget_book
   budget_book_schema_name       = module.budget_book.budget_book_schema_name
   budget_book_transactions_name = module.budget_book.budget_book_transactions_name
@@ -228,6 +240,8 @@ module "rbac" {
   fr_cortex_admin_role_name        = var.fr_cortex_admin_role_name
   fr_cortex_use_role_name          = var.fr_cortex_use_role_name
   fr_managed_access_test_role_name = var.fr_managed_access_test_role_name
-  fr_developer_db_write_role_name  = var.fr_developer_db_write_role_name
-  fr_developer_db_read_role_name   = var.fr_developer_db_read_role_name
+  fr_developer_db_write_role_name          = var.fr_developer_db_write_role_name
+  fr_developer_db_read_role_name           = var.fr_developer_db_read_role_name
+  fr_raw_company_matching_write_role_name  = var.fr_raw_company_matching_write_role_name
+  fr_raw_company_matching_read_role_name   = var.fr_raw_company_matching_read_role_name
 }
