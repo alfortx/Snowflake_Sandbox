@@ -164,6 +164,16 @@ module "config" {
   session_policy_name     = var.config_session_policy_name
 }
 
+module "project_db" {
+  source = "./modules/project_db"
+
+  providers = {
+    snowflake.sysadmin = snowflake.sysadmin
+  }
+
+  project_db_name = var.project_db_name
+}
+
 module "rbac" {
   source = "./modules/rbac"
 
@@ -244,4 +254,7 @@ module "rbac" {
   fr_developer_db_read_role_name           = var.fr_developer_db_read_role_name
   fr_raw_company_matching_write_role_name  = var.fr_raw_company_matching_write_role_name
   fr_raw_company_matching_read_role_name   = var.fr_raw_company_matching_read_role_name
+
+  # project_db
+  project_db_name = module.project_db.project_db_name
 }
