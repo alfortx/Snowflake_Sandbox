@@ -473,6 +473,23 @@ terraform apply
 
 ---
 
+## 開発者向けセットアップ
+
+### Git フック（pre-commit）の有効化
+
+リポジトリをクローン後、**1回だけ**以下を実行してください。
+
+```bash
+git config core.hooksPath .githooks
+```
+
+これにより、`terraform/modules/rbac/` 配下のファイルを変更してコミットする際に、
+`docs/rbac_tree.md`（RBAC継承ツリー）が自動で更新されてコミットに含まれます。
+
+> **必要なもの**: `venv/` が作成済みで `python-hcl2` がインストール済みであること（STEP 7参照）
+
+---
+
 ## ファイル構成
 
 ```
