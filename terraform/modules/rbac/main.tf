@@ -120,4 +120,3 @@ resource "snowflake_grant_account_role" "viewer_inherits_raw_company_matching_re
   role_name        = snowflake_account_role.fr_raw_company_matching_read.name
   parent_role_name = var.viewer_role_name
 }
-
