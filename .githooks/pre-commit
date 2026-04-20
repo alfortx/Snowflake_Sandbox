@@ -1,0 +1,33 @@
+#!/bin/sh
+# pre-commit フック
+# terraform/modules/rbac/ 配下に変更がある場合、RBAC ドキュメントを自動更新する
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+RBAC_DIR="terraform/modules/rbac"
+SCRIPT="scripts/update_rbac_docs.py"
+VENV_PYTHON="$REPO_ROOT/venv/bin/python3"
+
+# ステージされたファイルに rbac 関連の変更があるか確認
+if git diff --cached --name-only | grep -q "^$RBAC_DIR/"; then
+    echo "[pre-commit] RBAC 変更を検出。ドキュメントを自動更新中..."
+
+    # venv が存在する場合は venv の Python を使用、なければシステムの python3
+    if [ -f "$VENV_PYTHON" ]; then
+        PYTHON="$VENV_PYTHON"
+    else
+        PYTHON="python3"
+    fi
+
+    # スクリプトを実行
+    "$PYTHON" "$REPO_ROOT/$SCRIPT"
+    if [ $? -ne 0 ]; then
+        echo "[pre-commit] エラー: RBAC ドキュメントの更新に失敗しました"
+        exit 1
+    fi
+
+    # 生成されたドキュメントをステージに追加
+    git add "$REPO_ROOT/docs/rbac_tree.md"
+    echo "[pre-commit] docs/rbac_tree.md をコミットに追加しました"
+fi
+
+exit 0

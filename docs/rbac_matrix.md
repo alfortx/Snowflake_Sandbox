@@ -11,7 +11,7 @@ Snowflake RBAC ベストプラクティスに基づき、**機能的ロール（
 | ロール名 | 用途 | 付与ユーザー |
 |---------|------|-----------|
 | `DEVELOPER_ROLE` | 開発者（読み書き + Cortex 管理含む） | sandbox_user, MAIN |
-| `VIEWER_ROLE` | 閲覧者（読み取り専用 + Cortex 利用） | sandbox_user, MAIN |
+| `VIEWER_ROLE` | 閲覧者（SANDBOX_DB.WORK のみ読み書き可 + 他は読み取り専用 + Cortex 利用） | sandbox_user, MAIN |
 | `SCHEMA_OWNER_ROLE` | Managed Access スキーマ所有者 | sandbox_user |
 
 ---
@@ -100,7 +100,7 @@ Snowflake RBAC ベストプラクティスに基づき、**機能的ロール（
 | FR_WH_SANDBOX_USE | — | ✓ |
 | FR_WH_MV_OPERATE | ✓ | — |
 | FR_WH_MV_USE | — | ✓ |
-| FR_SANDBOX_WORK_WRITE | ✓ | — |
+| FR_SANDBOX_WORK_WRITE | ✓ | ✓ |
 | FR_SANDBOX_WORK_READ | — | ✓ |
 | FR_RAW_COVID19_WRITE | ✓ | — |
 | FR_RAW_COVID19_READ | — | ✓ |
