@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cortex Search Service の仕組み</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f5f6f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #__bundler_loading { position: fixed; bottom: 20px; right: 20px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; color: #666; background: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); z-index: 10000; }
+    #__bundler_thumbnail { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f5f6f9; z-index: 9999; }
+    #__bundler_thumbnail svg { width: 100%; height: 100%; object-fit: contain; }
+    #__bundler_placeholder { color: #999; font-size: 14px; }
+  </style>
+  <noscript>
+    <style>#__bundler_loading { display: none; }</style>
+    <div style="position:fixed;bottom:12px;left:12px;font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:#999;background:rgba(255,255,255,0.9);padding:6px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);z-index:10000;">
+      This page requires JavaScript to display.
+    </div>
+  </noscript>
+</head>
+<body>
+  <div id="__bundler_thumbnail">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect x="80" y="120" width="240" height="320" rx="6" fill="#ffffff" stroke="#c8ccd4" stroke-width="3"></rect>
+    <rect x="80" y="120" width="240" height="40" fill="#eceff4"></rect>
+    <rect x="110" y="190" width="180" height="20" fill="#dbe3f5"></rect>
+    <rect x="110" y="220" width="180" height="20" fill="#dbe3f5"></rect>
+    <rect x="110" y="250" width="180" height="20" fill="#dbe3f5"></rect>
+    <rect x="110" y="280" width="180" height="20" fill="#dbe3f5"></rect>
+
+    <rect x="420" y="220" width="240" height="140" rx="6" fill="#ffffff" stroke="#c8ccd4" stroke-width="3"></rect>
+    <text x="540" y="300" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#2b3550">embed()</text>
+
+    <rect x="760" y="120" width="240" height="320" rx="6" fill="#ffffff" stroke="#2c5cff" stroke-width="4"></rect>
+    <g transform="translate(790, 210)">
+      <rect x="0" y="0" width="24" height="16" fill="#7aa0ff"></rect>
+      <rect x="30" y="0" width="24" height="16" fill="#4d7cff"></rect>
+      <rect x="60" y="0" width="24" height="16" fill="#a3bdff"></rect>
+      <rect x="90" y="0" width="24" height="16" fill="#3663ff"></rect>
+      <rect x="120" y="0" width="24" height="16" fill="#6c92ff"></rect>
+      <rect x="150" y="0" width="24" height="16" fill="#8aacff"></rect>
+      <rect x="0" y="28" width="24" height="16" fill="#5a82ff"></rect>
+      <rect x="30" y="28" width="24" height="16" fill="#9bb7ff"></rect>
+      <rect x="60" y="28" width="24" height="16" fill="#4269ff"></rect>
+      <rect x="90" y="28" width="24" height="16" fill="#7298ff"></rect>
+      <rect x="120" y="28" width="24" height="16" fill="#aac0ff"></rect>
+      <rect x="150" y="28" width="24" height="16" fill="#3d66ff"></rect>
+      <rect x="0" y="56" width="24" height="16" fill="#6a8dff"></rect>
+      <rect x="30" y="56" width="24" height="16" fill="#8eaeff"></rect>
+      <rect x="60" y="56" width="24" height="16" fill="#4870ff"></rect>
+      <rect x="90" y="56" width="24" height="16" fill="#b1c6ff"></rect>
+      <rect x="120" y="56" width="24" height="16" fill="#5c82ff"></rect>
+      <rect x="150" y="56" width="24" height="16" fill="#87a8ff"></rect>
+    </g>
+
+    <path d="M 320 280 L 420 280" stroke="#2c5cff" stroke-width="3" fill="none" marker-end="url(#t-arr)"></path>
+    <path d="M 660 280 L 760 280" stroke="#2c5cff" stroke-width="3" fill="none" marker-end="url(#t-arr)"></path>
+
+    <defs>
+      <marker id="t-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#2c5cff"></path>
+      </marker>
+    </defs>
+
+    <text x="600" y="620" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="500" font-size="44" fill="#1a2238">
+      Cortex Search Service
+    </text>
+    <text x="600" y="670" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" fill="#5b6478">
+      テキスト → ベクトル → 検索可能なインデックス
+    </text>
+  </svg>
+</div>
+  <div id="__bundler_loading">Unpacking...</div>
+
+  <script>
+    
+document.addEventListener('DOMContentLoaded', async function() {
+  const loading = document.getElementById('__bundler_loading');
+  function setStatus(msg) { if (loading) loading.textContent = msg; }
+
+  // Error sink persists across replaceWith since it's on window, not the DOM.
+  window.addEventListener('error', function(e) {
+    var p = document.body || document.documentElement;
+    var d = document.getElementById('__bundler_err') || p.appendChild(document.createElement('div'));
+    d.id = '__bundler_err';
+    d.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;font:12px/1.4 ui-monospace,monospace;background:#2a1215;color:#ff8a80;padding:10px 14px;border-radius:8px;border:1px solid #5c2b2e;z-index:99999;white-space:pre-wrap;max-height:40vh;overflow:auto';
+    d.textContent = (d.textContent ? d.textContent + String.fromCharCode(10) : '') +
+      '[bundle] ' + (e.message || e.type) +
+      (e.filename ? ' (' + e.filename.slice(0, 60) + ':' + e.lineno + ')' : '');
+  }, true);
+
+  try {
+    const manifestEl = document.querySelector('script[type="__bundler/manifest"]');
+    const templateEl = document.querySelector('script[type="__bundler/template"]');
+    if (!manifestEl || !templateEl) {
+      setStatus('Error: missing bundle data');
+      console.error('[bundler] Missing script tags — manifestEl:', !!manifestEl, 'templateEl:', !!templateEl);
+      return;
+    }
+
+    const manifest = JSON.parse(manifestEl.textContent);
+    let template = JSON.parse(templateEl.textContent);
+
+    const uuids = Object.keys(manifest);
+    setStatus('Unpacking ' + uuids.length + ' assets...');
+
+    const blobUrls = {};
+    await Promise.all(uuids.map(async (uuid) => {
+      const entry = manifest[uuid];
+      try {
+        const binaryStr = atob(entry.data);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+        let finalBytes = bytes;
+        if (entry.compressed) {
+          if (typeof DecompressionStream !== 'undefined') {
+            const ds = new DecompressionStream('gzip');
+            const writer = ds.writable.getWriter();
+            const reader = ds.readable.getReader();
+            writer.write(bytes);
+            writer.close();
+            const chunks = [];
+            let totalLen = 0;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              totalLen += value.length;
+            }
+            finalBytes = new Uint8Array(totalLen);
+            let offset = 0;
+            for (const chunk of chunks) { finalBytes.set(chunk, offset); offset += chunk.length; }
+          } else {
+            console.warn('DecompressionStream not available, asset ' + uuid + ' may not render');
+          }
+        }
+
+        blobUrls[uuid] = URL.createObjectURL(new Blob([finalBytes], { type: entry.mime }));
+      } catch (err) {
+        console.error('Failed to decode asset ' + uuid + ':', err);
+        blobUrls[uuid] = URL.createObjectURL(new Blob([], { type: entry.mime }));
+      }
+    }));
+
+    const extResEl = document.querySelector('script[type="__bundler/ext_resources"]');
+    const extResources = extResEl ? JSON.parse(extResEl.textContent) : [];
+    const resourceMap = {};
+    for (const entry of extResources) {
+      if (blobUrls[entry.uuid]) resourceMap[entry.id] = blobUrls[entry.uuid];
+    }
+
+    setStatus('Rendering...');
+    for (const uuid of uuids) template = template.split(uuid).join(blobUrls[uuid]);
+
+    // Strip integrity + crossorigin — blob URLs from a file:// document inherit
+    // a null origin, so crossorigin forces a CORS fetch that SRI then rejects.
+    // The manifest bytes are ours; SRI protects against CDN compromise, not this.
+    template = template.replace(/\s+integrity="[^"]*"/gi, '').replace(/\s+crossorigin="[^"]*"/gi, '');
+
+    const resourceScript = '<script>window.__resources = ' +
+      JSON.stringify(resourceMap).split('</' + 'script>').join('<\\/' + 'script>') +
+      ';</' + 'script>';
+    // Inject after <head> so the DOCTYPE stays first; prepending the script
+    // would push the parser into quirks mode. DOMParser always emits a <head>
+    // (synthesizing one if the source HTML omitted it) but may carry
+    // attributes through, so match the full opening tag. slice() rather than
+    // replace() keeps us clear of $-pattern substitution in resourceScript.
+    const headOpen = template.match(/<head[^>]*>/i);
+    if (headOpen) {
+      const i = headOpen.index + headOpen[0].length;
+      template = template.slice(0, i) + resourceScript + template.slice(i);
+    }
+
+    // Parse the template and swap the root element. Scripts inserted via
+    // DOMParser/replaceWith are inert per spec — re-create each with
+    // createElement so they execute, awaiting onload for src scripts to
+    // preserve ordering (React before ReactDOM before Babel before text/babel).
+    const doc = new DOMParser().parseFromString(template, 'text/html');
+    document.documentElement.replaceWith(doc.documentElement);
+    const dead = Array.from(document.scripts);
+    for (const old of dead) {
+      const s = document.createElement('script');
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.textContent = old.textContent;
+      // text/babel scripts with a src: fetch and inline. transformScriptTags
+      // does XHR against the src, but blob:null/ from a file:// origin is
+      // silently dropped. Inlining makes it a plain inline babel script,
+      // which transformScriptTags handles unconditionally.
+      if ((s.type === 'text/babel' || s.type === 'text/jsx') && s.src) {
+        const r = await fetch(s.src);
+        s.textContent = await r.text();
+        s.removeAttribute('src');
+      }
+      const p = s.src ? new Promise(function(r) { s.onload = s.onerror = r; }) : null;
+      old.replaceWith(s);
+      if (p) await p;
+    }
+    // Babel standalone auto-transforms type=text/babel on DOMContentLoaded,
+    // which fired before we swapped the document. Trigger manually if present.
+    if (window.Babel && typeof window.Babel.transformScriptTags === 'function') {
+      window.Babel.transformScriptTags();
+    }
+  } catch (err) {
+    setStatus('Error unpacking: ' + err.message);
+    console.error('Bundle unpack error:', err);
+  }
+});
+
+  </script>
+
+  <script type="__bundler/manifest">
+{}
+  </script>
+
+  <script type="__bundler/ext_resources">
+[]
+  </script>
+
+  <script type="__bundler/template">
+"<!DOCTYPE html>\n<html lang=\"ja\"><head>\n<meta charset=\"utf-8\">\n<title>Cortex Search Service の仕組み<\u002Ftitle>\n<meta name=\"viewport\" content=\"width=1280\">\n\n<style>\n  :root {\n    --bg: oklch(0.985 0.003 250);\n    --panel: #ffffff;\n    --ink: oklch(0.22 0.012 250);\n    --ink-2: oklch(0.42 0.010 250);\n    --ink-3: oklch(0.62 0.008 250);\n    --rule: oklch(0.90 0.006 250);\n    --rule-2: oklch(0.82 0.006 250);\n    --accent: oklch(0.52 0.14 255);       /* インクブルー */\n    --accent-soft: oklch(0.94 0.04 255);\n    --mono: ui-monospace, \"SF Mono\", \"JetBrains Mono\", Menlo, Consolas, monospace;\n    --sans: \"Helvetica Neue\", Helvetica, \"Hiragino Sans\", \"Yu Gothic\", system-ui, sans-serif;\n  }\n  * { box-sizing: border-box; }\n  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }\n  body {\n    padding: 20px 40px 28px;\n    font-size: 14px;\n    line-height: 1.5;\n    letter-spacing: 0.005em;\n    -webkit-font-smoothing: antialiased;\n  }\n  .wrap { max-width: 1160px; margin: 0 auto; }\n\n  /* ===== Header ===== */\n  header {\n    display: flex;\n    justify-content: space-between;\n    align-items: baseline;\n    border-bottom: 1px solid var(--rule);\n    padding-bottom: 8px;\n    margin-bottom: 10px;\n  }\n  .eyebrow {\n    font-family: var(--mono);\n    font-size: 11px;\n    text-transform: uppercase;\n    letter-spacing: 0.14em;\n    color: var(--ink-3);\n  }\n  h1 {\n    font-size: 20px;\n    font-weight: 500;\n    margin: 2px 0 0;\n    letter-spacing: -0.01em;\n  }\n  h1 .sub {\n    color: var(--ink-2);\n    font-weight: 400;\n  }\n  .meta {\n    font-family: var(--mono);\n    font-size: 11px;\n    color: var(--ink-3);\n    text-align: right;\n    line-height: 1.7;\n  }\n\n  /* ===== Intro ===== */\n  .intro {\n    display: grid;\n    grid-template-columns: 120px 1fr;\n    gap: 20px;\n    margin-bottom: 10px;\n  }\n  .intro h2 {\n    font-size: 13px;\n    font-weight: 500;\n    margin: 0;\n    color: var(--ink-2);\n    letter-spacing: 0.02em;\n  }\n  .intro p {\n    margin: 0;\n    font-size: 12.5px;\n    line-height: 1.55;\n    max-width: 900px;\n    text-wrap: pretty;\n  }\n  .intro p + p { margin-top: 4px; }\n  .intro strong { color: var(--ink); font-weight: 500; background: var(--accent-soft); padding: 1px 4px; border-radius: 2px; }\n\n  /* ===== Diagram ===== */\n  .diagram {\n    background: var(--panel);\n    border: 1px solid var(--rule);\n    border-radius: 4px;\n    padding: 12px 18px 14px;\n    margin-bottom: 14px;\n  }\n  .diagram-head {\n    display: flex;\n    justify-content: space-between;\n    align-items: baseline;\n    margin-bottom: 6px;\n  }\n  .diagram-head h2 {\n    font-size: 15px;\n    font-weight: 500;\n    margin: 0;\n    letter-spacing: 0.01em;\n  }\n  .diagram-head .tag {\n    font-family: var(--mono);\n    font-size: 11px;\n    color: var(--ink-3);\n    letter-spacing: 0.08em;\n  }\n\n  svg.flow { width: 100%; height: 380px; display: block; }\n  svg.flow text { font-family: var(--sans); fill: var(--ink); }\n  svg.flow .mono { font-family: var(--mono); }\n  svg.flow .label-lg { font-size: 15px; font-weight: 500; }\n  svg.flow .label-sm { font-size: 13px; fill: var(--ink-2); }\n  svg.flow .label-xs { font-size: 12px; fill: var(--ink-3); letter-spacing: 0.04em; }\n  svg.flow .col-title { font-family: var(--mono); font-size: 12px; fill: var(--ink-3); letter-spacing: 0.14em; text-transform: uppercase; }\n\n  /* ===== Entity mapping row (fused with diagram) ===== */\n  .entity-map {\n    margin-top: -2px;\n    padding-top: 0;\n  }\n  .entity-map .entity-head { display: none; }\n  .entity-grid {\n    display: grid;\n    grid-template-columns: repeat(4, 1fr);\n    gap: 0;\n    border: none;\n    border-top: 1px solid var(--rule);\n    border-radius: 0;\n    overflow: visible;\n    background: transparent;\n    padding-top: 10px;\n  }\n  .entity-col {\n    padding: 8px 12px 4px;\n    border-right: 1px dashed var(--rule);\n    background: transparent;\n    position: relative;\n    text-align: center;\n  }\n  .entity-col:last-child { border-right: none; }\n  .entity-col::before {\n    content: \"\";\n    position: absolute;\n    top: -8px;\n    left: 50%;\n    width: 1px;\n    height: 6px;\n    background: var(--accent);\n    opacity: 0.55;\n  }\n  .entity-col .step-n {\n    display: block;\n    font-family: var(--mono);\n    font-size: 10px;\n    color: var(--accent);\n    letter-spacing: 0.14em;\n    margin-bottom: 2px;\n    text-transform: uppercase;\n  }\n  .entity-col .role {\n    display: block;\n    font-size: 11.5px;\n    font-weight: 500;\n    color: var(--ink);\n    margin-bottom: 4px;\n    line-height: 1.35;\n    letter-spacing: 0.005em;\n  }\n  .entity-col .arrow {\n    display: block;\n    font-family: var(--mono);\n    font-size: 9.5px;\n    color: var(--ink-3);\n    letter-spacing: 0.14em;\n    margin: 4px 0 3px;\n  }\n  .entity-col .real {\n    font-family: var(--mono);\n    font-size: 11.5px;\n    color: var(--ink);\n    background: oklch(0.96 0.02 255);\n    border: 1px solid oklch(0.88 0.04 255);\n    padding: 5px 8px;\n    border-radius: 2px;\n    line-height: 1.35;\n    word-break: break-word;\n    text-align: center;\n    display: inline-block;\n    min-width: 80%;\n  }\n  .entity-col .real::before { content: none; }\n  .entity-col .real::after { content: none; }\n  .entity-col .real .hint {\n    display: block;\n    font-family: var(--sans);\n    font-size: 11.5px;\n    color: var(--ink-2);\n    margin-top: 4px;\n    line-height: 1.5;\n  }\n\n  /* ===== Step strip (kept for potential reuse) ===== */\n  .steps { display: none; }\n  .step {\n    padding: 22px 22px 24px;\n    border-right: 1px solid var(--rule);\n  }\n  .step:last-child { border-right: none; }\n  .step .n {\n    font-family: var(--mono);\n    font-size: 11px;\n    color: var(--accent);\n    letter-spacing: 0.12em;\n    margin-bottom: 10px;\n  }\n  .step h3 {\n    font-size: 14px;\n    font-weight: 500;\n    margin: 0 0 6px;\n    letter-spacing: 0.005em;\n  }\n  .step p {\n    margin: 0;\n    font-size: 13px;\n    color: var(--ink-2);\n    line-height: 1.6;\n  }\n\n  /* ===== Glossary ===== */\n  .glossary { margin-top: 24px; }\n  .glossary h2 {\n    font-size: 12px;\n    font-weight: 500;\n    margin: 0 0 10px;\n    color: var(--ink-2);\n    letter-spacing: 0.02em;\n  }\n  dl {\n    display: grid;\n    grid-template-columns: 200px 1fr;\n    gap: 8px 24px;\n    margin: 0;\n    font-size: 13px;\n  }\n  dt {\n    font-family: var(--mono);\n    font-size: 12px;\n    color: var(--ink);\n    padding-top: 2px;\n  }\n  dd {\n    margin: 0;\n    color: var(--ink-2);\n    line-height: 1.6;\n    border-left: 1px solid var(--rule);\n    padding-left: 20px;\n  }\n\n  footer {\n    margin-top: 28px;\n    padding-top: 12px;\n    border-top: 1px solid var(--rule);\n    display: flex;\n    justify-content: space-between;\n    font-family: var(--mono);\n    font-size: 11px;\n    color: var(--ink-3);\n    letter-spacing: 0.08em;\n  }\n\n  /* ===== Prompt archive ===== */\n  .prompt-archive {\n    margin-top: 32px;\n    padding-top: 18px;\n    border-top: 1px solid var(--rule);\n  }\n  .prompt-archive h2 {\n    font-size: 13px;\n    font-weight: 500;\n    margin: 0 0 6px;\n    color: var(--ink-2);\n    letter-spacing: 0.02em;\n  }\n  .prompt-note {\n    margin: 0 0 16px;\n    font-family: var(--mono);\n    font-size: 11px;\n    color: var(--ink-3);\n    letter-spacing: 0.04em;\n  }\n  .prompt-body {\n    margin: 0;\n    padding: 20px 22px;\n    background: oklch(0.97 0.004 250);\n    border: 1px solid var(--rule);\n    border-left: 2px solid var(--accent);\n    border-radius: 3px;\n    font-family: var(--mono);\n    font-size: 12.5px;\n    line-height: 1.75;\n    color: var(--ink-2);\n    white-space: pre-wrap;\n    word-break: break-word;\n    position: relative;\n  }\n  .prompt-body + .prompt-body { margin-top: 14px; }\n  .prompt-body::before {\n    content: attr(data-rev);\n    display: block;\n    font-size: 10px;\n    letter-spacing: 0.14em;\n    color: var(--ink-3);\n    margin-bottom: 10px;\n  }\n<\u002Fstyle>\n<\u002Fhead>\n<body>\n<div class=\"wrap\">\n\n  <header>\n    <div>\n      <div class=\"eyebrow\">Snowflake / Cortex Search Service<\u002Fdiv>\n      <h1>Cortex Search とは <span class=\"sub\">— ベクトル検索の仕組みを3分で<\u002Fspan><\u002Fh1>\n    <\u002Fdiv>\n    <div class=\"meta\">\n      FOR / Snowflake経験者 × LLM初心者<br>\n      REV / 2026.04\n    <\u002Fdiv>\n  <\u002Fheader>\n\n  <!-- Intro -->\n  <section class=\"intro\">\n    <h2>概要<\u002Fh2>\n    <div>\n      <p>\n        Cortex Search Service は、Snowflake のテーブルにある<strong>テキストカラム<\u002Fstrong>を\n        そのまま<strong>意味ベースで検索<\u002Fstrong>できるようにするマネージドサービス。\n      <\u002Fp>\n      <p>\n        裏側では、対象テキストを<strong>ベクトル（数値の配列）に変換<\u002Fstrong>し、\n        それを<strong>検索可能なインデックスに格納<\u002Fstrong>している。\n        検索時はクエリも同じ方法でベクトル化し、インデックス内で「意味が近い」ベクトルを探す。\n      <\u002Fp>\n    <\u002Fdiv>\n  <\u002Fsection>\n\n  <!-- Diagram -->\n  <section class=\"diagram\">\n    <div class=\"diagram-head\">\n      <h2>登場する要素と関係性<\u002Fh2>\n      <div class=\"tag\">FIG. 01 / DATA FLOW × SNOWFLAKE ENTITY<\u002Fdiv>\n    <\u002Fdiv>\n\n    <svg class=\"flow\" viewBox=\"0 0 1080 440\" preserveAspectRatio=\"xMidYMid meet\" aria-labelledby=\"flow-title\">\n      <title id=\"flow-title\">ソーステーブルからインデックス生成、検索までのデータフロー<\u002Ftitle>\n\n      <defs>\n        <marker id=\"arr\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"8\" markerHeight=\"8\" orient=\"auto-start-reverse\">\n          <path d=\"M0,0 L10,5 L0,10 z\" fill=\"oklch(0.52 0.14 255)\"><\u002Fpath>\n        <\u002Fmarker>\n        <marker id=\"arrInk\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\">\n          <path d=\"M0,0 L10,5 L0,10 z\" fill=\"oklch(0.42 0.010 250)\"><\u002Fpath>\n        <\u002Fmarker>\n        <pattern id=\"stripes\" width=\"6\" height=\"6\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\">\n          <line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"6\" stroke=\"oklch(0.90 0.006 250)\" stroke-width=\"3\"><\u002Fline>\n        <\u002Fpattern>\n      <\u002Fdefs>\n\n      <!-- Column titles -->\n      <text class=\"col-title\" x=\"135\" y=\"24\" text-anchor=\"middle\">01 / ソース<\u002Ftext>\n      <text class=\"col-title\" x=\"405\" y=\"24\" text-anchor=\"middle\">02 / ベクトル化<\u002Ftext>\n      <text class=\"col-title\" x=\"675\" y=\"24\" text-anchor=\"middle\">03 / インデックス<\u002Ftext>\n      <text class=\"col-title\" x=\"945\" y=\"24\" text-anchor=\"middle\">04 / 検索<\u002Ftext>\n\n      <!-- Divider lines (align with HTML grid at 25%, 50%, 75%) -->\n      <line x1=\"270\" y1=\"40\" x2=\"270\" y2=\"420\" stroke=\"var(--rule)\" stroke-dasharray=\"2 4\"><\u002Fline>\n      <line x1=\"540\" y1=\"40\" x2=\"540\" y2=\"420\" stroke=\"var(--rule)\" stroke-dasharray=\"2 4\"><\u002Fline>\n      <line x1=\"810\" y1=\"40\" x2=\"810\" y2=\"420\" stroke=\"var(--rule)\" stroke-dasharray=\"2 4\"><\u002Fline>\n\n      <!-- ============ 01 Source table (center x=135) ============ -->\n      <g transform=\"translate(35, 60)\">\n        <rect width=\"200\" height=\"230\" rx=\"3\" fill=\"#fff\" stroke=\"oklch(0.82 0.006 250)\"><\u002Frect>\n        <!-- table header -->\n        <rect width=\"200\" height=\"28\" rx=\"3\" fill=\"oklch(0.96 0.006 250)\"><\u002Frect>\n        <text class=\"mono label-sm\" x=\"12\" y=\"19\" fill=\"oklch(0.22 0.012 250)\">SOURCE_TABLE<\u002Ftext>\n        <!-- column headers -->\n        <line x1=\"0\" y1=\"28\" x2=\"200\" y2=\"28\" stroke=\"oklch(0.90 0.006 250)\"><\u002Fline>\n        <text class=\"mono label-xs\" x=\"12\" y=\"46\">id<\u002Ftext>\n        <text class=\"mono label-xs\" x=\"60\" y=\"46\">text_col<\u002Ftext>\n        <text class=\"mono label-xs\" x=\"150\" y=\"46\">…<\u002Ftext>\n        <line x1=\"0\" y1=\"56\" x2=\"200\" y2=\"56\" stroke=\"oklch(0.90 0.006 250)\"><\u002Fline>\n\n        <!-- rows -->\n        <g font-family=\"ui-monospace, monospace\" font-size=\"10.5\" fill=\"oklch(0.42 0.010 250)\">\n          <text x=\"12\" y=\"76\">001<\u002Ftext>\n          <rect x=\"56\" y=\"66\" width=\"84\" height=\"14\" fill=\"oklch(0.94 0.04 255)\"><\u002Frect>\n          <text x=\"60\" y=\"76\" fill=\"oklch(0.22 0.012 250)\">返品ポリシー…<\u002Ftext>\n\n          <text x=\"12\" y=\"100\">002<\u002Ftext>\n          <rect x=\"56\" y=\"90\" width=\"84\" height=\"14\" fill=\"oklch(0.94 0.04 255)\"><\u002Frect>\n          <text x=\"60\" y=\"100\" fill=\"oklch(0.22 0.012 250)\">配送日数の目安…<\u002Ftext>\n\n          <text x=\"12\" y=\"124\">003<\u002Ftext>\n          <rect x=\"56\" y=\"114\" width=\"84\" height=\"14\" fill=\"oklch(0.94 0.04 255)\"><\u002Frect>\n          <text x=\"60\" y=\"124\" fill=\"oklch(0.22 0.012 250)\">会員登録手順…<\u002Ftext>\n\n          <text x=\"12\" y=\"148\">004<\u002Ftext>\n          <rect x=\"56\" y=\"138\" width=\"84\" height=\"14\" fill=\"oklch(0.94 0.04 255)\"><\u002Frect>\n          <text x=\"60\" y=\"148\" fill=\"oklch(0.22 0.012 250)\">パスワード再設定…<\u002Ftext>\n\n          <text x=\"12\" y=\"172\">005<\u002Ftext>\n          <rect x=\"56\" y=\"162\" width=\"84\" height=\"14\" fill=\"oklch(0.94 0.04 255)\"><\u002Frect>\n          <text x=\"60\" y=\"172\" fill=\"oklch(0.22 0.012 250)\">支払い方法一覧…<\u002Ftext>\n        <\u002Fg>\n\n        <!-- highlight callout -->\n        <rect x=\"54\" y=\"62\" width=\"88\" height=\"118\" fill=\"none\" stroke=\"oklch(0.52 0.14 255)\" stroke-width=\"1\" stroke-dasharray=\"3 3\"><\u002Frect>\n        <text class=\"mono label-xs\" x=\"100\" y=\"200\" text-anchor=\"middle\" fill=\"oklch(0.52 0.14 255)\">検索対象カラム<\u002Ftext>\n        <text class=\"label-sm mono\" x=\"100\" y=\"216\" text-anchor=\"middle\">text_col<\u002Ftext>\n      <\u002Fg>\n\n      <!-- arrow 1 -->\n      <line x1=\"243\" y1=\"175\" x2=\"305\" y2=\"175\" stroke=\"oklch(0.52 0.14 255)\" stroke-width=\"1.5\" marker-end=\"url(#arr)\"><\u002Fline>\n      <text class=\"mono label-xs\" x=\"274\" y=\"165\" text-anchor=\"middle\" fill=\"oklch(0.52 0.14 255)\">embed()<\u002Ftext>\n\n      <!-- ============ 02 Embedding model (center x=405) ============ -->\n      <g transform=\"translate(305, 110)\">\n        <rect width=\"200\" height=\"130\" rx=\"3\" fill=\"url(#stripes)\" stroke=\"oklch(0.82 0.006 250)\"><\u002Frect>\n        <rect x=\"0\" y=\"0\" width=\"200\" height=\"130\" rx=\"3\" fill=\"#fff\" fill-opacity=\"0.85\"><\u002Frect>\n        <text class=\"label-lg\" x=\"100\" y=\"56\" text-anchor=\"middle\">埋め込みモデル<\u002Ftext>\n        <text class=\"label-sm mono\" x=\"100\" y=\"76\" text-anchor=\"middle\">embedding model<\u002Ftext>\n        <text class=\"label-xs\" x=\"100\" y=\"100\" text-anchor=\"middle\">テキスト → ベクトル<\u002Ftext>\n        <text class=\"mono label-xs\" x=\"100\" y=\"116\" text-anchor=\"middle\">“返品…” ↦ [0.12, -0.44, …]<\u002Ftext>\n      <\u002Fg>\n\n      <!-- arrow 2 -->\n      <line x1=\"513\" y1=\"175\" x2=\"575\" y2=\"175\" stroke=\"oklch(0.52 0.14 255)\" stroke-width=\"1.5\" marker-end=\"url(#arr)\"><\u002Fline>\n\n      <!-- ============ 03 Index (center x=675) ============ -->\n      <g transform=\"translate(575, 60)\">\n        <rect width=\"200\" height=\"230\" rx=\"3\" fill=\"#fff\" stroke=\"oklch(0.52 0.14 255)\" stroke-width=\"1.4\"><\u002Frect>\n        <rect width=\"200\" height=\"28\" rx=\"3\" fill=\"oklch(0.94 0.04 255)\"><\u002Frect>\n        <text class=\"mono label-sm\" x=\"12\" y=\"19\" fill=\"oklch(0.22 0.012 250)\">SEARCH_INDEX<\u002Ftext>\n        <text class=\"mono label-xs\" x=\"188\" y=\"19\" text-anchor=\"end\" fill=\"oklch(0.52 0.14 255)\">★<\u002Ftext>\n\n        <line x1=\"0\" y1=\"28\" x2=\"200\" y2=\"28\" stroke=\"oklch(0.82 0.006 250)\"><\u002Fline>\n\n        <text class=\"label-xs\" x=\"100\" y=\"48\" text-anchor=\"middle\">テキスト × ベクトルを<\u002Ftext>\n        <text class=\"label-xs\" x=\"100\" y=\"62\" text-anchor=\"middle\">検索可能な形で格納<\u002Ftext>\n\n        <!-- vector rows -->\n        <g font-family=\"ui-monospace, monospace\" font-size=\"9.5\">\n          <g transform=\"translate(12, 78)\">\n            <text fill=\"oklch(0.62 0.008 250)\">001<\u002Ftext>\n            <rect x=\"24\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.7 0.12 255)\"><\u002Frect>\n            <rect x=\"38\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.5 0.12 255)\"><\u002Frect>\n            <rect x=\"52\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.8 0.08 255)\"><\u002Frect>\n            <rect x=\"66\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.4 0.12 255)\"><\u002Frect>\n            <rect x=\"80\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.6 0.10 255)\"><\u002Frect>\n            <rect x=\"94\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.75 0.10 255)\"><\u002Frect>\n            <rect x=\"108\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.55 0.12 255)\"><\u002Frect>\n            <text x=\"128\" y=\"0\" fill=\"oklch(0.62 0.008 250)\">…<\u002Ftext>\n          <\u002Fg>\n          <g transform=\"translate(12, 100)\">\n            <text fill=\"oklch(0.62 0.008 250)\">002<\u002Ftext>\n            <rect x=\"24\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.55 0.12 255)\"><\u002Frect>\n            <rect x=\"38\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.75 0.10 255)\"><\u002Frect>\n            <rect x=\"52\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.45 0.12 255)\"><\u002Frect>\n            <rect x=\"66\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.65 0.10 255)\"><\u002Frect>\n            <rect x=\"80\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.80 0.08 255)\"><\u002Frect>\n            <rect x=\"94\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.50 0.12 255)\"><\u002Frect>\n            <rect x=\"108\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.70 0.10 255)\"><\u002Frect>\n            <text x=\"128\" y=\"0\" fill=\"oklch(0.62 0.008 250)\">…<\u002Ftext>\n          <\u002Fg>\n          <g transform=\"translate(12, 122)\">\n            <text fill=\"oklch(0.62 0.008 250)\">003<\u002Ftext>\n            <rect x=\"24\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.80 0.08 255)\"><\u002Frect>\n            <rect x=\"38\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.45 0.12 255)\"><\u002Frect>\n            <rect x=\"52\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.70 0.10 255)\"><\u002Frect>\n            <rect x=\"66\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.55 0.12 255)\"><\u002Frect>\n            <rect x=\"80\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.40 0.12 255)\"><\u002Frect>\n            <rect x=\"94\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.65 0.10 255)\"><\u002Frect>\n            <rect x=\"108\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.75 0.10 255)\"><\u002Frect>\n            <text x=\"128\" y=\"0\" fill=\"oklch(0.62 0.008 250)\">…<\u002Ftext>\n          <\u002Fg>\n          <g transform=\"translate(12, 144)\">\n            <text fill=\"oklch(0.62 0.008 250)\">004<\u002Ftext>\n            <rect x=\"24\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.60 0.10 255)\"><\u002Frect>\n            <rect x=\"38\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.50 0.12 255)\"><\u002Frect>\n            <rect x=\"52\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.75 0.10 255)\"><\u002Frect>\n            <rect x=\"66\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.45 0.12 255)\"><\u002Frect>\n            <rect x=\"80\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.70 0.10 255)\"><\u002Frect>\n            <rect x=\"94\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.55 0.12 255)\"><\u002Frect>\n            <rect x=\"108\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.65 0.10 255)\"><\u002Frect>\n            <text x=\"128\" y=\"0\" fill=\"oklch(0.62 0.008 250)\">…<\u002Ftext>\n          <\u002Fg>\n          <g transform=\"translate(12, 166)\">\n            <text fill=\"oklch(0.62 0.008 250)\">005<\u002Ftext>\n            <rect x=\"24\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.65 0.10 255)\"><\u002Frect>\n            <rect x=\"38\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.55 0.12 255)\"><\u002Frect>\n            <rect x=\"52\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.80 0.08 255)\"><\u002Frect>\n            <rect x=\"66\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.40 0.12 255)\"><\u002Frect>\n            <rect x=\"80\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.60 0.10 255)\"><\u002Frect>\n            <rect x=\"94\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.75 0.10 255)\"><\u002Frect>\n            <rect x=\"108\" y=\"-8\" width=\"12\" height=\"10\" fill=\"oklch(0.50 0.12 255)\"><\u002Frect>\n            <text x=\"128\" y=\"0\" fill=\"oklch(0.62 0.008 250)\">…<\u002Ftext>\n          <\u002Fg>\n        <\u002Fg>\n\n        <text class=\"mono label-xs\" x=\"100\" y=\"200\" text-anchor=\"middle\">id × vector<\u002Ftext>\n        <text class=\"label-xs\" x=\"100\" y=\"216\" text-anchor=\"middle\">（類似度で高速検索）<\u002Ftext>\n      <\u002Fg>\n\n      <!-- ============ 04 Query (center x=945) ============ -->\n      <!-- query input box -->\n      <g transform=\"translate(855, 80)\">\n        <rect width=\"180\" height=\"58\" rx=\"3\" fill=\"#fff\" stroke=\"oklch(0.82 0.006 250)\"><\u002Frect>\n        <text class=\"mono label-xs\" x=\"12\" y=\"18\">USER QUERY<\u002Ftext>\n        <text class=\"label-sm\" x=\"12\" y=\"40\">「返品はできる？」<\u002Ftext>\n      <\u002Fg>\n\n      <!-- query → vector -->\n      <line x1=\"945\" y1=\"140\" x2=\"945\" y2=\"168\" stroke=\"oklch(0.42 0.010 250)\" stroke-width=\"1.2\" marker-end=\"url(#arrInk)\"><\u002Fline>\n      <text class=\"mono label-xs\" x=\"953\" y=\"158\">embed()<\u002Ftext>\n\n      <g transform=\"translate(855, 170)\">\n        <rect width=\"180\" height=\"56\" rx=\"3\" fill=\"oklch(0.94 0.04 255)\" stroke=\"oklch(0.52 0.14 255)\"><\u002Frect>\n        <text class=\"mono label-xs\" x=\"12\" y=\"18\" fill=\"oklch(0.52 0.14 255)\">QUERY VECTOR<\u002Ftext>\n        <g transform=\"translate(12, 34)\">\n          <rect x=\"0\" y=\"0\" width=\"14\" height=\"12\" fill=\"oklch(0.55 0.14 255)\"><\u002Frect>\n          <rect x=\"16\" y=\"0\" width=\"14\" height=\"12\" fill=\"oklch(0.70 0.12 255)\"><\u002Frect>\n          <rect x=\"32\" y=\"0\" width=\"14\" height=\"12\" fill=\"oklch(0.45 0.14 255)\"><\u002Frect>\n          <rect x=\"48\" y=\"0\" width=\"14\" height=\"12\" fill=\"oklch(0.75 0.10 255)\"><\u002Frect>\n          <rect x=\"64\" y=\"0\" width=\"14\" height=\"12\" fill=\"oklch(0.60 0.12 255)\"><\u002Frect>\n          <rect x=\"80\" y=\"0\" width=\"14\" height=\"12\" fill=\"oklch(0.50 0.14 255)\"><\u002Frect>\n          <rect x=\"96\" y=\"0\" width=\"14\" height=\"12\" fill=\"oklch(0.65 0.12 255)\"><\u002Frect>\n          <text class=\"mono label-xs\" x=\"116\" y=\"10\" fill=\"oklch(0.42 0.010 250)\">…<\u002Ftext>\n        <\u002Fg>\n      <\u002Fg>\n\n      <!-- query vector → index: similarity match -->\n      <path d=\"M 853 198 C 835 198, 825 175, 779 175\" fill=\"none\" stroke=\"oklch(0.52 0.14 255)\" stroke-width=\"1.5\" marker-end=\"url(#arr)\"><\u002Fpath>\n      <text class=\"mono label-xs\" x=\"815\" y=\"218\" text-anchor=\"middle\" fill=\"oklch(0.52 0.14 255)\">類似度で照合<\u002Ftext>\n\n      <!-- ============ Result row ============ -->\n      <g transform=\"translate(35, 340)\">\n        <text class=\"mono label-xs\" x=\"0\" y=\"0\">RESULT ─<\u002Ftext>\n        <text class=\"label-sm\" x=\"64\" y=\"0\" fill=\"oklch(0.22 0.012 250)\">\n          「返品ポリシー…」<tspan class=\"mono label-xs\" fill=\"oklch(0.62 0.008 250)\">（id: 001, score: 0.92）<\u002Ftspan>\n          が最も近いベクトルとして返る。\n        <\u002Ftext>\n      <\u002Fg>\n      <g transform=\"translate(60, 370)\">\n        <text class=\"label-xs\" x=\"0\" y=\"0\" fill=\"oklch(0.42 0.010 250)\">\n          キーワード一致ではなく「意味の近さ」で検索されるので、語彙が違っても該当行がヒットする。\n        <\u002Ftext>\n      <\u002Fg>\n    <\u002Fsvg>\n\n    <!-- Snowflake entity mapping -->\n    <div class=\"entity-map\">\n      <div class=\"entity-head\">FIG. 02 / Snowflakeでの実体<\u002Fdiv>\n      <div class=\"entity-grid\">\n        <div class=\"entity-col\">\n          <div class=\"step-n\">01 / ソース<\u002Fdiv>\n          <div class=\"role\">ソーステーブル<br>＋ テキストカラム<\u002Fdiv>\n          <div class=\"arrow\">SNOWFLAKE 実体 ↓<\u002Fdiv>\n          <div class=\"real\">DATABASE.SCHEMA.TABLE<\u002Fdiv>\n        <\u002Fdiv>\n\n        <div class=\"entity-col\">\n          <div class=\"step-n\">02 / ベクトル化<\u002Fdiv>\n          <div class=\"role\">埋め込みモデル<br>（テキスト → ベクトル）<\u002Fdiv>\n          <div class=\"arrow\">SNOWFLAKE 実体 ↓<\u002Fdiv>\n          <div class=\"real\">Cortex 内蔵の埋め込みモデル<\u002Fdiv>\n        <\u002Fdiv>\n\n        <div class=\"entity-col\">\n          <div class=\"step-n\">03 / インデックス<\u002Fdiv>\n          <div class=\"role\">検索可能なインデックス<br>（id × ベクトル）<\u002Fdiv>\n          <div class=\"arrow\">SNOWFLAKE 実体 ↓<\u002Fdiv>\n          <div class=\"real\">CORTEX SEARCH SERVICE<\u002Fdiv>\n        <\u002Fdiv>\n\n        <div class=\"entity-col\">\n          <div class=\"step-n\">04 / 検索<\u002Fdiv>\n          <div class=\"role\">クエリ<br>＋ クエリベクトル<\u002Fdiv>\n          <div class=\"arrow\">SNOWFLAKE 実体 ↓<\u002Fdiv>\n          <div class=\"real\">SEARCH_PREVIEW() / REST API<\u002Fdiv>\n        <\u002Fdiv>\n      <\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fsection>\n\n  <!-- Steps -->\n  <section class=\"steps\">\n    <div class=\"step\">\n      <div class=\"n\">STEP 01<\u002Fdiv>\n      <h3>ソーステーブルを指定<\u002Fh3>\n      <p>Snowflakeの既存テーブルと、検索対象にしたい<span style=\"font-family:var(--mono)\">テキストカラム<\u002Fspan>を1つ選ぶ。<\u002Fp>\n    <\u002Fdiv>\n    <div class=\"step\">\n      <div class=\"n\">STEP 02<\u002Fdiv>\n      <h3>テキストをベクトル化<\u002Fh3>\n      <p>埋め込みモデルが各行のテキストを数値ベクトルに変換する。Cortex が自動で実行。<\u002Fp>\n    <\u002Fdiv>\n    <div class=\"step\">\n      <div class=\"n\">STEP 03<\u002Fdiv>\n      <h3>インデックスに格納<\u002Fh3>\n      <p>変換後のベクトルを<strong style=\"color:var(--accent);font-weight:500\">検索可能なインデックス<\u002Fstrong>に保存。ソース更新にも追従。<\u002Fp>\n    <\u002Fdiv>\n    <div class=\"step\">\n      <div class=\"n\">STEP 04<\u002Fdiv>\n      <h3>クエリも同じ方法で<\u002Fh3>\n      <p>検索クエリも同じモデルでベクトル化し、インデックス内で近いベクトルを返す。<\u002Fp>\n    <\u002Fdiv>\n  <\u002Fsection>\n\n  <!-- Glossary -->\n  <section class=\"glossary\">\n    <h2>用語対応表<\u002Fh2>\n    <dl>\n      <dt>ソーステーブル<\u002Fdt>\n      <dd>検索したい元データが入った Snowflake のテーブル。普段SQLで触っているものそのまま。<\u002Fdd>\n\n      <dt>テキストカラム（検索対象）<\u002Fdt>\n      <dd>ソーステーブルの中で「この中身を検索したい」と指定する1つのカラム。FAQの本文、商品説明、ドキュメント本文など。<\u002Fdd>\n\n      <dt>ベクトル（埋め込み）<\u002Fdt>\n      <dd>テキストの意味を数百〜数千次元の数値配列で表したもの。意味が近いテキストほどベクトル同士の距離も近くなる。<\u002Fdd>\n\n      <dt>インデックス<\u002Fdt>\n      <dd>ベクトルを高速に類似検索できるよう整理したデータ構造。Cortex Search がサービスとして管理する。<\u002Fdd>\n\n      <dt>クエリ（検索文字列）<\u002Fdt>\n      <dd>ユーザーが投げる自然言語の問い合わせ。同じ埋め込みモデルでベクトル化され、インデックスと照合される。<\u002Fdd>\n    <\u002Fdl>\n  <\u002Fsection>\n\n  <!-- Original prompt (for reproducibility) -->\n  <section class=\"prompt-archive\">\n    <h2>作成指示（原文）<\u002Fh2>\n    <p class=\"prompt-note\">本資料を再生成・更新する際の元プロンプト。<\u002Fp>\n    <pre class=\"prompt-body\" data-rev=\"REV 01 / 2026.04.21\">SnowflakeCortexSerachServiceの説明\n\nLLM初心者かつSnowflake経験者を想定し。簡潔に記載して\n\n以下の要素を反映して\n「ベクトルを検索可能なインデックスに格納」の要素を含むこと\n「ソーステーブル\nソーステーブルのテキストカラム（検索対象）\nソースのテキストカラムの変換後のベクトル\n検索クエリと変換後のベクトル」\nこれらの関係性がわかること。<\u002Fpre>\n\n    <pre class=\"prompt-body\" data-rev=\"REV 02 / 2026.04.22\">登場する要素と関係性 セクションで、ソース〜検索までの要素が「Snowflakeでの実体は何か」という要素を追加して。また\nこの指示も末尾に追加して。以下同じ。<\u002Fpre>\n\n    <pre class=\"prompt-body\" data-rev=\"REV 03 / 2026.04.22\">FIG01 と FIG02 の要素を、一画面でスクロール無しで見れるよう、統合して。スペースを稼ぐために、FIG2の実態の解説文が長いので「実体の説明」のみに絞って。<\u002Fpre>\n\n    <pre class=\"prompt-body\" data-rev=\"REV 04 / 2026.04.22\">FIG01と02が別セクションに見えるので、１つのスライドとして統合して欲しい。<\u002Fpre>\n    <pre class=\"prompt-body\" data-rev=\"REV 05 / 2026.04.22\">01〜04の各アイテムと、その実態のテキスト文が、上下に並んで対応関係が一目でわかるようにして<\u002Fpre>\n\n    <pre class=\"prompt-body\" data-rev=\"REV 06 / 2026.04.22\">フロー図のサイズ（文字サイズも）をあげて、実体の説明01の上にフロー01が来るようにして、02〜04も同様にして。<\u002Fpre>\n\n  <\u002Fsection>\n\n  <footer>\n    <div>SNOWFLAKE × CORTEX SEARCH — OVERVIEW<\u002Fdiv>\n    <div>1 / 1<\u002Fdiv>\n  <\u002Ffooter>\n\n<\u002Fdiv>\n\n\n<\u002Fbody><\u002Fhtml>"
+  </script>
+</body>
+</html>
