@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(snow sql:*)"
+      "Bash(snow sql:*)",
+      "Bash(bash scripts/deploy-notebooks.sh:*)"
     ]
   }
 }
