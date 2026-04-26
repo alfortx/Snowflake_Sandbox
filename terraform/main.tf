@@ -174,6 +174,23 @@ module "project_db" {
   project_db_name = var.project_db_name
 }
 
+module "iceberg" {
+  source = "./modules/iceberg"
+
+  providers = {
+    snowflake.sysadmin     = snowflake.sysadmin
+    snowflake.accountadmin = snowflake.accountadmin
+    aws                    = aws
+  }
+
+  environment              = var.environment
+  iceberg_s3_bucket_name   = var.iceberg_s3_bucket_name
+  iceberg_iam_role_name    = var.iceberg_iam_role_name
+  external_volume_name     = var.iceberg_external_volume_name
+  iceberg_db_name          = var.iceberg_db_name
+  iceberg_work_schema_name = var.iceberg_work_schema_name
+}
+
 module "rbac" {
   source = "./modules/rbac"
 
@@ -257,4 +274,10 @@ module "rbac" {
 
   # project_db
   project_db_name = module.project_db.project_db_name
+
+  # iceberg
+  iceberg_db_name          = module.iceberg.iceberg_db_name
+  iceberg_work_schema_name = module.iceberg.iceberg_work_schema_name
+  fr_iceberg_write_role_name = var.fr_iceberg_write_role_name
+  fr_iceberg_read_role_name  = var.fr_iceberg_read_role_name
 }

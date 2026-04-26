@@ -1113,3 +1113,107 @@ resource "snowflake_grant_privileges_to_account_role" "fr_raw_company_matching_r
     object_name = "\"${var.raw_db_name}\".\"${var.company_matching_schema_name}\".\"${var.mv_nta_companies_name}\""
   }
 }
+
+# =============================================================================
+# FR_ICEBERG_WRITE / FR_ICEBERG_READ
+# =============================================================================
+resource "snowflake_account_role" "fr_iceberg_write" {
+  provider = snowflake.securityadmin
+  name     = var.fr_iceberg_write_role_name
+  comment  = "ICEBERG_DB.WORK への読み書き権限"
+}
+
+resource "snowflake_account_role" "fr_iceberg_read" {
+  provider = snowflake.securityadmin
+  name     = var.fr_iceberg_read_role_name
+  comment  = "ICEBERG_DB.WORK への読み取り権限"
+}
+
+# DB USAGE
+resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_write_db_usage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_iceberg_write.name
+  privileges        = ["USAGE"]
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = var.iceberg_db_name
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_read_db_usage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_iceberg_read.name
+  privileges        = ["USAGE"]
+  on_account_object {
+    object_type = "DATABASE"
+    object_name = var.iceberg_db_name
+  }
+}
+
+# SCHEMA USAGE
+resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_write_schema_usage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_iceberg_write.name
+  privileges        = ["USAGE", "CREATE TABLE", "CREATE ICEBERG TABLE"]
+  on_schema {
+    schema_name = "\"${var.iceberg_db_name}\".\"${var.iceberg_work_schema_name}\""
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_read_schema_usage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_iceberg_read.name
+  privileges        = ["USAGE"]
+  on_schema {
+    schema_name = "\"${var.iceberg_db_name}\".\"${var.iceberg_work_schema_name}\""
+  }
+}
+
+# TABLE 権限（既存・将来作成分）
+resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_write_all_tables" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_iceberg_write.name
+  privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"]
+  on_schema_object {
+    all {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${var.iceberg_db_name}\".\"${var.iceberg_work_schema_name}\""
+    }
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_write_future_tables" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_iceberg_write.name
+  privileges        = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"]
+  on_schema_object {
+    future {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${var.iceberg_db_name}\".\"${var.iceberg_work_schema_name}\""
+    }
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_read_all_tables" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_iceberg_read.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    all {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${var.iceberg_db_name}\".\"${var.iceberg_work_schema_name}\""
+    }
+  }
+}
+
+resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_read_future_tables" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_iceberg_read.name
+  privileges        = ["SELECT"]
+  on_schema_object {
+    future {
+      object_type_plural = "TABLES"
+      in_schema          = "\"${var.iceberg_db_name}\".\"${var.iceberg_work_schema_name}\""
+    }
+  }
+}
