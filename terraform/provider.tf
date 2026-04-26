@@ -88,7 +88,8 @@ provider "snowflake" {
   # v2.13.0 で snowflake_storage_integration の内部実装がプレビュー機能に移行したため明示的に有効化
   preview_features_enabled = [
     "snowflake_storage_integration_resource",
-    "snowflake_current_account_resource",  # アカウントパラメータ管理
+    "snowflake_current_account_resource",       # アカウントパラメータ管理
+    "snowflake_external_volume_resource",        # Iceberg Tables 用 External Volume
   ]
 }
 

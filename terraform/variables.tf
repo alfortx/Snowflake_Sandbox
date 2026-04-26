@@ -391,3 +391,49 @@ variable "config_session_policy_name" {
   type        = string
   default     = "BLOCK_SECONDARY_ROLES"
 }
+
+# =============================================================================
+# Iceberg 学習用変数
+# =============================================================================
+
+variable "iceberg_s3_bucket_name" {
+  description = "Iceberg Tables 用 S3 バケット名"
+  type        = string
+  default     = "snowflake-sandbox-iceberg"
+}
+
+variable "iceberg_iam_role_name" {
+  description = "Iceberg 専用 IAM ロール名（外部ステージ用ロールとは分離）"
+  type        = string
+  default     = "snowflake-sandbox-iceberg-role"
+}
+
+variable "iceberg_external_volume_name" {
+  description = "Snowflake External Volume 名（Iceberg Tables 用）"
+  type        = string
+  default     = "ICEBERG_S3_VOLUME"
+}
+
+variable "iceberg_db_name" {
+  description = "Iceberg 学習用データベース名"
+  type        = string
+  default     = "ICEBERG_DB"
+}
+
+variable "iceberg_work_schema_name" {
+  description = "Iceberg 学習用スキーマ名"
+  type        = string
+  default     = "WORK"
+}
+
+variable "fr_iceberg_write_role_name" {
+  description = "ICEBERG_DB.WORK への読み書き権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_ICEBERG_WRITE"
+}
+
+variable "fr_iceberg_read_role_name" {
+  description = "ICEBERG_DB.WORK への読み取り権限を持つ機能的ロール名"
+  type        = string
+  default     = "FR_ICEBERG_READ"
+}

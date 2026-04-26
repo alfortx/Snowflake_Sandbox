@@ -92,3 +92,11 @@ variable "fr_developer_db_read_role_name" { type = string }
 # project_db モジュール出力
 # =============================================================================
 variable "project_db_name" { type = string }
+
+# =============================================================================
+# iceberg モジュール出力
+# =============================================================================
+variable "iceberg_db_name" { type = string }
+variable "iceberg_work_schema_name" { type = string }
+variable "fr_iceberg_write_role_name" { type = string }
+variable "fr_iceberg_read_role_name" { type = string }

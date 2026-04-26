@@ -120,3 +120,16 @@ resource "snowflake_grant_account_role" "viewer_inherits_raw_company_matching_re
   role_name        = snowflake_account_role.fr_raw_company_matching_read.name
   parent_role_name = var.viewer_role_name
 }
+
+# --- ICEBERG ---
+resource "snowflake_grant_account_role" "developer_inherits_iceberg_write" {
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_iceberg_write.name
+  parent_role_name = var.developer_role_name
+}
+
+resource "snowflake_grant_account_role" "viewer_inherits_iceberg_read" {
+  provider         = snowflake.securityadmin
+  role_name        = snowflake_account_role.fr_iceberg_read.name
+  parent_role_name = var.viewer_role_name
+}
