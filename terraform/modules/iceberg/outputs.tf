@@ -17,3 +17,8 @@ output "iceberg_s3_bucket_name" {
   description = "Iceberg 用 S3 バケット名"
   value       = aws_s3_bucket.iceberg.bucket
 }
+
+output "iceberg_stage_name" {
+  description = "実験用外部ステージ名（ICEBERG_DB.WORK 内）"
+  value       = snowflake_stage.iceberg_work.name
+}

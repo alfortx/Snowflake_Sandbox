@@ -1217,3 +1217,26 @@ resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_read_future_ta
     }
   }
 }
+
+# 外部ステージ権限（実験用 Notebook からのツリー取得・ファイルリード用）
+# FR_ICEBERG_WRITE: READ + WRITE（ステージへのファイル書き込みも可能）
+resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_write_stage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_iceberg_write.name
+  privileges        = ["READ", "WRITE"]
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${var.iceberg_db_name}\".\"${var.iceberg_work_schema_name}\".\"${var.iceberg_stage_name}\""
+  }
+}
+
+# FR_ICEBERG_READ: READ のみ（ツリー取得・ファイルリード用）
+resource "snowflake_grant_privileges_to_account_role" "fr_iceberg_read_stage" {
+  provider          = snowflake.securityadmin
+  account_role_name = snowflake_account_role.fr_iceberg_read.name
+  privileges        = ["READ"]
+  on_schema_object {
+    object_type = "STAGE"
+    object_name = "\"${var.iceberg_db_name}\".\"${var.iceberg_work_schema_name}\".\"${var.iceberg_stage_name}\""
+  }
+}

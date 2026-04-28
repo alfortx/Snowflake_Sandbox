@@ -437,3 +437,21 @@ variable "fr_iceberg_read_role_name" {
   type        = string
   default     = "FR_ICEBERG_READ"
 }
+
+variable "iceberg_stage_name" {
+  description = "Iceberg S3 バケットを参照する外部ステージ名（実験用 Notebook からのツリー取得・ファイルリード用）"
+  type        = string
+  default     = "ICEBERG_WORK_STAGE"
+}
+
+variable "iceberg_storage_integration_name" {
+  description = "外部ステージ用 Storage Integration 名（Iceberg S3 バケット専用）"
+  type        = string
+  default     = "ICEBERG_S3_INTEGRATION"
+}
+
+variable "iceberg_stage_iam_role_name" {
+  description = "Storage Integration 専用 IAM ロール名（External Volume 用 iceberg-role とは分離）"
+  type        = string
+  default     = "snowflake-sandbox-iceberg-stage-role"
+}

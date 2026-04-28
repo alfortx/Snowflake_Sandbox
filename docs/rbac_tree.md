@@ -2,7 +2,7 @@
 
 > **自動生成ファイル** — 手動編集不可。
 > `terraform/modules/rbac/` の変更時に `scripts/update_rbac_docs.py` が自動更新します。
-> 最終更新: 2026-04-26 20:57
+> 最終更新: 2026-04-28 18:25
 
 ---
 
@@ -84,6 +84,7 @@
   - `ICEBERG_DB.WORK` (SCHEMA) ← USAGE, CREATE TABLE, CREATE ICEBERG TABLE
   - `` () ← SELECT, INSERT, UPDATE, DELETE, TRUNCATE
   - `ICEBERG_DB.WORK.*` (FUTURE TABLES) ← SELECT, INSERT, UPDATE, DELETE, TRUNCATE `[future]`
+  - `ICEBERG_DB.WORK.ICEBERG_WORK_STAGE` (STAGE) ← READ, WRITE
 
 ## VIEWER_ROLE
 
@@ -155,3 +156,4 @@
   - `ICEBERG_DB.WORK` (SCHEMA) ← USAGE
   - `` () ← SELECT
   - `ICEBERG_DB.WORK.*` (FUTURE TABLES) ← SELECT `[future]`
+  - `ICEBERG_DB.WORK.ICEBERG_WORK_STAGE` (STAGE) ← READ
