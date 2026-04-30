@@ -183,12 +183,15 @@ module "iceberg" {
     aws                    = aws
   }
 
-  environment              = var.environment
-  iceberg_s3_bucket_name   = var.iceberg_s3_bucket_name
-  iceberg_iam_role_name    = var.iceberg_iam_role_name
-  external_volume_name     = var.iceberg_external_volume_name
-  iceberg_db_name          = var.iceberg_db_name
-  iceberg_work_schema_name = var.iceberg_work_schema_name
+  environment                      = var.environment
+  iceberg_s3_bucket_name           = var.iceberg_s3_bucket_name
+  iceberg_iam_role_name            = var.iceberg_iam_role_name
+  external_volume_name             = var.iceberg_external_volume_name
+  iceberg_db_name                  = var.iceberg_db_name
+  iceberg_work_schema_name         = var.iceberg_work_schema_name
+  iceberg_stage_name               = var.iceberg_stage_name
+  iceberg_storage_integration_name = var.iceberg_storage_integration_name
+  iceberg_stage_iam_role_name      = var.iceberg_stage_iam_role_name
 }
 
 module "rbac" {
@@ -276,8 +279,9 @@ module "rbac" {
   project_db_name = module.project_db.project_db_name
 
   # iceberg
-  iceberg_db_name          = module.iceberg.iceberg_db_name
-  iceberg_work_schema_name = module.iceberg.iceberg_work_schema_name
+  iceberg_db_name            = module.iceberg.iceberg_db_name
+  iceberg_work_schema_name   = module.iceberg.iceberg_work_schema_name
+  iceberg_stage_name         = module.iceberg.iceberg_stage_name
   fr_iceberg_write_role_name = var.fr_iceberg_write_role_name
   fr_iceberg_read_role_name  = var.fr_iceberg_read_role_name
 }

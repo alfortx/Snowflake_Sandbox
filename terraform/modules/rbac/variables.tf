@@ -98,5 +98,6 @@ variable "project_db_name" { type = string }
 # =============================================================================
 variable "iceberg_db_name" { type = string }
 variable "iceberg_work_schema_name" { type = string }
+variable "iceberg_stage_name" { type = string }
 variable "fr_iceberg_write_role_name" { type = string }
 variable "fr_iceberg_read_role_name" { type = string }
