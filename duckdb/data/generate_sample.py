@@ -4,8 +4,12 @@
 """
 
 import csv
+import os
 import random
 from datetime import date, timedelta
+
+# スクリプト自身の場所を基準にパスを解決（CWDに依存しない）
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ---- 顧客マスタ (customers.csv) ----
 customers = [
@@ -16,7 +20,7 @@ customers = [
     {"customer_id": 5, "name": "伊藤 健二", "region": "東京"},
 ]
 
-with open("duckdb/data/customers.csv", "w", newline="", encoding="utf-8") as f:
+with open(os.path.join(SCRIPT_DIR, "customers.csv"), "w", newline="", encoding="utf-8") as f:
     writer = csv.DictWriter(f, fieldnames=["customer_id", "name", "region"])
     writer.writeheader()
     writer.writerows(customers)
@@ -33,7 +37,7 @@ products = [
     {"product_id": 106, "product_name": "デスク", "category": "家具", "unit_price": 28000},
 ]
 
-with open("duckdb/data/products.csv", "w", newline="", encoding="utf-8") as f:
+with open(os.path.join(SCRIPT_DIR, "products.csv"), "w", newline="", encoding="utf-8") as f:
     writer = csv.DictWriter(f, fieldnames=["product_id", "product_name", "category", "unit_price"])
     writer.writeheader()
     writer.writerows(products)
@@ -61,7 +65,7 @@ for sale_id in range(1, 101):  # 100件
         "amount": amount,
     })
 
-with open("duckdb/data/sales.csv", "w", newline="", encoding="utf-8") as f:
+with open(os.path.join(SCRIPT_DIR, "sales.csv"), "w", newline="", encoding="utf-8") as f:
     writer = csv.DictWriter(f, fieldnames=["sale_id", "sale_date", "customer_id", "product_id", "quantity", "amount"])
     writer.writeheader()
     writer.writerows(sales)
