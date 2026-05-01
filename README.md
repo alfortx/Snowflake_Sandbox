@@ -246,6 +246,47 @@ Snowflake接続情報やリソース名が一覧表示されます。
 
 ---
 
+## STEP 5-2: DuckDB学習用の認証情報を取得する
+
+`terraform apply` 完了後、DuckDB学習用IAMユーザーのアクセスキーを取得して `.env` に追記します。
+
+> **なぜ手動取得が必要か？**
+> AWSのアクセスキー（シークレット）は作成時のAPIレスポンスに1回だけ含まれます。
+> Terraformはそれをtfstateに保存しているため、以下のコマンドで取得できます。
+> ただし **`terraform apply` 直後のみ有効**（tfstateを削除・再作成した場合は新しいキーを再発行）。
+
+### 取得コマンド
+
+プロジェクトルートで実行してください。
+
+```bash
+set -a && source .env && set +a
+terraform -chdir=terraform show -json | python3 -c "
+import json,sys
+data=json.load(sys.stdin)
+for r in data['values']['root_module']['child_modules']:
+    if 'duckdb' in r['address']:
+        for res in r['resources']:
+            if 'access_key' in res['address']:
+                v=res['values']
+                print('DUCKDB_AWS_ACCESS_KEY_ID=' + v['id'])
+                print('DUCKDB_AWS_SECRET_ACCESS_KEY=' + v['secret'])
+"
+```
+
+出力された値を `.env` に追記します（`DUCKDB_S3_BUCKET` と `DUCKDB_S3_REGION` はそのまま）。
+
+```bash
+DUCKDB_AWS_ACCESS_KEY_ID=出力されたキーID
+DUCKDB_AWS_SECRET_ACCESS_KEY=出力されたシークレット
+DUCKDB_S3_BUCKET=duckdb-study-sandbox
+DUCKDB_S3_REGION=ap-northeast-1
+```
+
+> ⚠️ シークレットアクセスキーは**このコマンドでのみ取得可能**です。必ず控えてから次のステップへ進んでください。
+
+---
+
 ## STEP 6: Snowflake Intelligence / Cortex Agent の利用
 
 > ✅ **STEP 6 は `terraform apply` 完了後すぐに使えます。** 手動セットアップは不要です。

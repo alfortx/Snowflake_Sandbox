@@ -455,3 +455,19 @@ variable "iceberg_stage_iam_role_name" {
   type        = string
   default     = "snowflake-sandbox-iceberg-stage-role"
 }
+
+# =============================================================================
+# DuckDB 学習用変数
+# =============================================================================
+
+variable "duckdb_s3_bucket_name" {
+  description = "DuckDB 学習用 S3 バケット名（Parquet ファイルを置き DuckDB から直接クエリする）"
+  type        = string
+  default     = "duckdb-study-sandbox"
+}
+
+variable "duckdb_iam_user_name" {
+  description = "DuckDB から S3 にアクセスするための IAM ユーザー名（DuckDB は IAM ロール AssumeRole 非対応のためユーザー認証を使用）"
+  type        = string
+  default     = "duckdb-study-user"
+}

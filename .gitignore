@@ -37,3 +37,7 @@ crash.*.log
 sample_data/
 
 todo.md
+
+# DuckDB
+*.duckdb
+*.duckdb.wal
