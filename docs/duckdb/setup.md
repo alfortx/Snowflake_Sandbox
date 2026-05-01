@@ -35,6 +35,36 @@ pip install -r requirements.txt
 
 ---
 
+## サンプルデータの生成
+
+Notebook で使用するCSV・Parquetファイルはスクリプトで生成します。
+データファイルはGit管理外のため、**初回クローン後に必ず実行**してください。
+
+```bash
+# CSVを生成（duckdb/data/ に customers.csv / products.csv / sales.csv が作成される）
+python3 duckdb/data/generate_sample.py
+```
+
+次に `02_parquet.ipynb` の変換セルを実行すると `duckdb/data/parquet/` 配下のParquetファイルが生成されます。
+または以下のコマンドでまとめて変換できます。
+
+```bash
+python3 -c "
+import duckdb, os
+con = duckdb.connect()
+os.makedirs('duckdb/data/parquet/monthly', exist_ok=True)
+for t in ['customers','products','sales']:
+    con.execute(f\"COPY (SELECT * FROM read_csv_auto('duckdb/data/{t}.csv')) TO 'duckdb/data/parquet/{t}.parquet' (FORMAT PARQUET)\")
+    print(f'✓ {t}.parquet')
+months = con.execute(\"SELECT DISTINCT strftime(sale_date,'%Y-%m') AS ym FROM read_parquet('duckdb/data/parquet/sales.parquet') ORDER BY ym\").fetchall()
+for (ym,) in months:
+    con.execute(f\"COPY (SELECT * FROM read_parquet('duckdb/data/parquet/sales.parquet') WHERE strftime(sale_date,'%Y-%m')='{ym}') TO 'duckdb/data/parquet/monthly/sales_{ym}.parquet' (FORMAT PARQUET)\")
+    print(f'✓ sales_{ym}.parquet')
+"
+```
+
+---
+
 ## Jupyter Notebook の起動
 
 ```bash
