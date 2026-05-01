@@ -41,3 +41,6 @@ todo.md
 # DuckDB
 *.duckdb
 *.duckdb.wal
+duckdb/data/*.csv
+duckdb/data/parquet/
+duckdb/notebooks/.ipynb_checkpoints/

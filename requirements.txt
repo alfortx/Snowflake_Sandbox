@@ -1,0 +1,20 @@
+# Snowflake
+snowflake-connector-python==4.3.0
+
+# AWS
+boto3==1.42.71
+
+# Utilities
+python-dotenv==1.2.2
+python-hcl2==8.1.2
+requests==2.32.5
+xlrd==2.0.2
+
+# DuckDB
+duckdb>=1.2.0
+numpy>=1.26.0
+pandas>=2.2.0
+
+# Jupyter
+jupyter>=1.1.0
+ipykernel>=6.29.0
