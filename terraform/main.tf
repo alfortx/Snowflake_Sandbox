@@ -194,6 +194,18 @@ module "iceberg" {
   iceberg_stage_iam_role_name      = var.iceberg_stage_iam_role_name
 }
 
+module "duckdb" {
+  source = "./modules/duckdb"
+
+  providers = {
+    aws = aws
+  }
+
+  environment           = var.environment
+  duckdb_s3_bucket_name = var.duckdb_s3_bucket_name
+  duckdb_iam_user_name  = var.duckdb_iam_user_name
+}
+
 module "rbac" {
   source = "./modules/rbac"
 
